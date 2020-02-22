@@ -12,6 +12,10 @@
 #include <iostream>
 #include <string>
 
+#include "imgui/imgui.h"
+#include "imgui/examples/imgui_impl_glfw.h"
+#include "imgui/examples/imgui_impl_opengl3.h"
+
 // remember: include glad before GLFW
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -29,14 +33,61 @@ namespace prefix {
         //do a bunch of raytracing into texture
         //image.SaveToFile("image.png"); // no need to put in loop since we dont update image
 
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         // render loop
-        while (!glfwWindowShouldClose(window)) {
-            //image.Render();
-
-            glfwSwapBuffers(window);
+        while (!glfwWindowShouldClose(m_window)) {
+            // handle inputs
             glfwPollEvents();
+
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            buildUI();
+
+            // rendering...
+            //image.Render();
+            ImGui::Render();
+
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+            glfwSwapBuffers(m_window);
         }
 
+        return cleanup();
+    }
+
+    void Program::buildUI() {
+        // start Dear ImGui frame...
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+        ImGui::SetNextWindowSizeConstraints(ImVec2(1024.0f, 64.0f), ImVec2(1024.0f, 512.0f));
+        ImGui::Begin("SETTINGS");
+
+        ImGui::Separator();
+
+        ImGui::Text("TODO...");
+
+        ImGui::Separator();
+
+        ImGui::End();
+
+        ImGui::EndFrame();
+    }
+
+    bool Program::cleanup() {
+        // Dear ImGui cleanup...
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
+
+        // glfw cleanup...
+        if (nullptr != m_window) {
+            glfwDestroyWindow(m_window);
+            m_window = nullptr;
+        }
+        glfwTerminate();
         return true;
     }
 
@@ -65,23 +116,29 @@ namespace prefix {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        // reference: https://stackoverflow.com/questions/42848322/what-does-my-choice-of-glfw-samples-actually-do
+        //glfwWindowHint(GLFW_SAMPLES, 4);
+        //glEnable(GL_MULTISAMPLE);
         int const WIDTH = 1024;
         int const HEIGHT = 1024;
-        window = glfwCreateWindow(WIDTH, HEIGHT, "WaveTool", nullptr, nullptr);
-        if (!window) {
+        m_window = glfwCreateWindow(WIDTH, HEIGHT, "WaveTool", nullptr, nullptr);
+        if (!m_window) {
             std::cout << "ERROR: Program failed to create GLFW window, TERMINATING..." << std::endl;
             glfwTerminate();
             return false;
         }
 
         // so that we can access this program object on key callbacks...
-        glfwSetWindowUserPointer(window, this);
+        glfwSetWindowUserPointer(m_window, this);
 
         // set the custom function that tracks key presses
-        glfwSetKeyCallback(window, keyCallback);
+        glfwSetKeyCallback(m_window, keyCallback);
+
+        // set callback for window resizing
+        glfwSetWindowSizeCallback(m_window, windowSizeCallback);
 
         // bring the new window to the foreground (not strictly necessary but convenient)
-        glfwMakeContextCurrent(window);
+        glfwMakeContextCurrent(m_window);
         // enable VSync
         glfwSwapInterval(1);
 
@@ -92,6 +149,20 @@ namespace prefix {
             glfwTerminate();
             return false;
         }
+
+        // reference: https://blog.conan.io/2019/06/26/An-introduction-to-the-Dear-ImGui-library.html
+        // setup Dear ImGui context...
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImGuiIO &io = ImGui::GetIO();
+        // setup platform/renderer bindings...
+        ImGui_ImplGlfw_InitForOpenGL(m_window, true);
+        char const* glsl_version = "#version 410 core";
+        //NOTE: must init glad before this call to not get an exception
+        // reference: https://stackoverflow.com/questions/48582444/imgui-with-the-glad-opengl-loader-throws-segmentation-fault-core-dumped
+        ImGui_ImplOpenGL3_Init(glsl_version);
+        // set UI style...
+        ImGui::StyleColorsDark();
 
         // query and print out information about our OpenGL environment
         queryGLVersion();
@@ -112,4 +183,9 @@ namespace prefix {
             glfwSetWindowShouldClose(window, GL_TRUE);
         }
     }
+
+    void windowSizeCallback(GLFWwindow *window, int width, int height) {
+        glViewport(0, 0, width, height);
+    }
+
 }

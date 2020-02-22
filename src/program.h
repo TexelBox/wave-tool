@@ -23,7 +23,12 @@ namespace prefix {
             bool start();
         private:
             //ImageBuffer image;
-            GLFWwindow *window = nullptr;
+            GLFWwindow *m_window = nullptr;
+
+            // constructs Dear ImGui UI components
+            void buildUI();
+
+            bool cleanup();
 
             // prints system specs to the console
             void queryGLVersion();
@@ -36,6 +41,7 @@ namespace prefix {
     //NOTE: GLFW requires them to not be member functions of a class
     void errorCallback(int error, char const* description);
     void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods);
+    void windowSizeCallback(GLFWwindow *window, int width, int height);
 }
 
 #endif // PREFIX_PROGRAM_H_

@@ -99,6 +99,15 @@ target_include_directories(glad PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/deps/glad/i
 # stb...
 # header-only so nothing to do here
 
+# Dear ImGui...
+# reference: https://retifrav.github.io/blog/2019/08/04/glfw-dear-imgui/
+file(GLOB PREFIX_DEAR_IMGUI_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/*.h")
+list(APPEND PREFIX_DEAR_IMGUI_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/examples/imgui_impl_glfw.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/examples/imgui_impl_glfw.h" "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/examples/imgui_impl_opengl3.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/examples/imgui_impl_opengl3.h")
+add_library(dear-imgui STATIC ${PREFIX_DEAR_IMGUI_SOURCE_FILES})
+# note: must include GLFW and glad, since that is the implementation we are using
+target_include_directories(dear-imgui PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui" "${CMAKE_CURRENT_SOURCE_DIR}/deps/glfw/include" "${CMAKE_CURRENT_SOURCE_DIR}/deps/glad/include")
+# note: we don't have to link GLFW/glad here with dear-imgui, since everything will be linked later to make our executable
+
 # reference: https://stackoverflow.com/questions/35411489/add-all-files-under-a-folder-to-a-cmake-glob
 # reference: https://stackoverflow.com/questions/7533502/how-can-i-merge-multiple-lists-of-files-together-with-cmake
 # reference: https://stackoverflow.com/questions/15550777/how-do-i-exclude-a-single-file-from-a-cmake-fileglob-pattern
@@ -169,7 +178,7 @@ endif()
 # reference: https://cmake.org/cmake/help/v3.10/module/FindOpenGL.html
 # reference: https://www.glfw.org/docs/latest/build_guide.html#build_link_cmake_source
 # I think that the order matters in some cases (i've seen that a lib on the left depends on a lib to the right of it)
-target_link_libraries(cpp-xplatform PRIVATE glad glfw OpenGL::GL)
+target_link_libraries(cpp-xplatform PRIVATE dear-imgui glad glfw OpenGL::GL)
 
 # reference: https://stackoverflow.com/questions/7304625/how-do-i-change-the-startup-project-of-a-visual-studio-solution-via-cmake
 # sets the startup project in the Visual Studio solution (so that user doesn't have to explicitly right click target and set option)
