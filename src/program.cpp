@@ -21,6 +21,12 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
+#include "camera.h"
+#include "input-handler.h"
+#include "mesh-object.h"
+#include "object-loader.h"
+#include "render-engine.h"
+
 namespace wave_tool {
     Program::Program() {}
 
@@ -28,6 +34,12 @@ namespace wave_tool {
 
     bool Program::start() {
         if (!setupWindow()) return false;
+
+        m_camera = std::make_shared<Camera>();
+        m_renderEngine = std::make_shared<RenderEngine>(m_window, m_camera);
+        InputHandler::setUp(m_renderEngine, m_camera);
+
+        initScene();
 
         //image.Initialize();
         //do a bunch of raytracing into texture
@@ -44,8 +56,9 @@ namespace wave_tool {
             buildUI();
 
             // rendering...
-            //image.Render();
             ImGui::Render();
+            //image.Render();
+            m_renderEngine->render(m_meshObjects);
 
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -63,11 +76,31 @@ namespace wave_tool {
 
         ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
         ImGui::SetNextWindowSizeConstraints(ImVec2(1024.0f, 64.0f), ImVec2(1024.0f, 512.0f));
+        //ImGui::SetWindowSize(ImVec2(1024.0f, 256.0f));
         ImGui::Begin("SETTINGS");
 
         ImGui::Separator();
 
         ImGui::Text("TODO...");
+
+        ImGui::Separator();
+
+        if (nullptr != m_yzPlane) {
+            if (ImGui::Button("TOGGLE YZ-PLANE (RED)")) m_yzPlane->m_isVisible = !m_yzPlane->m_isVisible;
+            ImGui::SameLine();
+        }
+        if (nullptr != m_xzPlane) {
+            if (ImGui::Button("TOGGLE XZ-PLANE (GREEN)")) m_xzPlane->m_isVisible = !m_xzPlane->m_isVisible;
+            ImGui::SameLine();
+        }
+        if (nullptr != m_xyPlane) {
+            if (ImGui::Button("TOGGLE XY-PLANE (BLUE)")) m_xyPlane->m_isVisible = !m_xyPlane->m_isVisible;
+            ImGui::SameLine();
+        }
+        if (nullptr != m_yzPlane || nullptr != m_xzPlane || nullptr != m_xyPlane) {
+            ImGui::Text("   note: grid spacing is 10 units");
+            ImGui::Separator();
+        }
 
         ImGui::Separator();
 
@@ -89,6 +122,100 @@ namespace wave_tool {
         }
         glfwTerminate();
         return true;
+    }
+
+    //NOTE: this method should only be called ONCE at start
+    void Program::initScene() {
+        // CREATE THE 3 PLANES...
+
+        // draw a symmetrical grid for each cartesian plane...
+
+        //NOTE: compare this to far clipping plane distance of 2000
+        //NOTE: all these should be the same
+        int const maxX = 500;
+        int const maxY = 500;
+        int const maxZ = 500;
+        //NOTE: any change here should be reflected in the ImGui notice
+        int const deltaX = 10;
+        int const deltaY = 10;
+        int const deltaZ = 10;
+
+        // YZ PLANE
+
+        m_yzPlane = std::make_shared<MeshObject>();
+
+        for (int y = -maxY; y <= maxY; y += deltaY) {
+            m_yzPlane->drawVerts.push_back(glm::vec3(0.0f, y, -maxZ));
+            m_yzPlane->drawVerts.push_back(glm::vec3(0.0f, y, maxZ));
+        }
+        for (int z = -maxZ; z <= maxZ; z += deltaZ) {
+            m_yzPlane->drawVerts.push_back(glm::vec3(0.0f, -maxY, z));
+            m_yzPlane->drawVerts.push_back(glm::vec3(0.0f, maxY, z));
+        }
+
+        for (unsigned int i = 0; i < m_yzPlane->drawVerts.size(); ++i) {
+            m_yzPlane->drawFaces.push_back(i);
+            m_yzPlane->colours.push_back(glm::vec3(1.0f, 0.0f, 0.0f));
+        }
+
+        m_yzPlane->m_primitiveMode = PrimitiveMode::LINES;
+        m_meshObjects.push_back(m_yzPlane);
+        m_renderEngine->assignBuffers(*m_yzPlane);
+
+        // XZ PLANE
+
+        m_xzPlane = std::make_shared<MeshObject>();
+
+        for (int x = -maxX; x <= maxX; x += deltaX) {
+            m_xzPlane->drawVerts.push_back(glm::vec3(x, 0.0f, -maxZ));
+            m_xzPlane->drawVerts.push_back(glm::vec3(x, 0.0f, maxZ));
+        }
+        for (int z = -maxZ; z <= maxZ; z += deltaZ) {
+            m_xzPlane->drawVerts.push_back(glm::vec3(-maxX, 0.0f, z));
+            m_xzPlane->drawVerts.push_back(glm::vec3(maxX, 0.0f, z));
+        }
+
+        for (unsigned int i = 0; i < m_xzPlane->drawVerts.size(); ++i) {
+            m_xzPlane->drawFaces.push_back(i);
+            m_xzPlane->colours.push_back(glm::vec3(0.0f, 1.0f, 0.0f));
+        }
+
+        m_xzPlane->m_primitiveMode = PrimitiveMode::LINES;
+        m_meshObjects.push_back(m_xzPlane);
+        m_renderEngine->assignBuffers(*m_xzPlane);
+
+        // XY PLANE
+
+        m_xyPlane = std::make_shared<MeshObject>();
+
+        for (int x = -maxX; x <= maxX; x += deltaX) {
+            m_xyPlane->drawVerts.push_back(glm::vec3(x, -maxY, 0.0f));
+            m_xyPlane->drawVerts.push_back(glm::vec3(x, maxY, 0.0f));
+        }
+        for (int y = -maxY; y <= maxY; y += deltaY) {
+            m_xyPlane->drawVerts.push_back(glm::vec3(-maxX, y, 0.0f));
+            m_xyPlane->drawVerts.push_back(glm::vec3(maxX, y, 0.0f));
+        }
+
+        for (unsigned int i = 0; i < m_xyPlane->drawVerts.size(); ++i) {
+            m_xyPlane->drawFaces.push_back(i);
+            m_xyPlane->colours.push_back(glm::vec3(0.0f, 0.0f, 1.0f));
+        }
+
+        m_xyPlane->m_primitiveMode = PrimitiveMode::LINES;
+        m_meshObjects.push_back(m_xyPlane);
+        m_renderEngine->assignBuffers(*m_xyPlane);
+
+        // yoshi placeholder...
+        std::shared_ptr<MeshObject> yoshi = ObjectLoader::createTriMeshObject("../assets/models/imports/yoshi.obj", false, true);
+        if (nullptr != yoshi) {
+            if (yoshi->hasTexture) yoshi->textureID = m_renderEngine->loadTexture("../assets/textures/yoshi.png");
+            yoshi->generateNormals();
+            m_meshObjects.push_back(yoshi);
+            m_renderEngine->assignBuffers(*yoshi);
+        }
+
+        //TODO: in the future, allow users to load in different terrains? (it would be nice to get program to work dynamically with water terrain it comes across)
     }
 
     void Program::queryGLVersion() {
@@ -128,14 +255,17 @@ namespace wave_tool {
             return false;
         }
 
-        // so that we can access this program object on key callbacks...
+        // so that we can access this program object in callbacks...
         glfwSetWindowUserPointer(m_window, this);
 
-        // set the custom function that tracks key presses
-        glfwSetKeyCallback(m_window, keyCallback);
-
-        // set callback for window resizing
-        glfwSetWindowSizeCallback(m_window, windowSizeCallback);
+        // set callbacks...
+        glfwSetCursorPosCallback(m_window, InputHandler::motion);
+        //glfwSetKeyCallback(m_window, keyCallback);
+        glfwSetKeyCallback(m_window, InputHandler::key);
+        glfwSetMouseButtonCallback(m_window, InputHandler::mouse);
+        glfwSetScrollCallback(m_window, InputHandler::scroll);
+        //glfwSetWindowSizeCallback(m_window, windowSizeCallback);
+        glfwSetWindowSizeCallback(m_window, InputHandler::reshape);
 
         // bring the new window to the foreground (not strictly necessary but convenient)
         glfwMakeContextCurrent(m_window);
@@ -175,6 +305,7 @@ namespace wave_tool {
         std::cout << description << std::endl;
     }
 
+/*
     void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods) {
         Program *program = (Program*)glfwGetWindowUserPointer(window);
 
@@ -183,9 +314,11 @@ namespace wave_tool {
             glfwSetWindowShouldClose(window, GL_TRUE);
         }
     }
+*/
 
+/*
     void windowSizeCallback(GLFWwindow *window, int width, int height) {
         glViewport(0, 0, width, height);
     }
-
+*/
 }
