@@ -108,6 +108,9 @@ add_library(dear-imgui STATIC ${PREFIX_DEAR_IMGUI_SOURCE_FILES})
 target_include_directories(dear-imgui PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui" "${CMAKE_CURRENT_SOURCE_DIR}/deps/glfw/include" "${CMAKE_CURRENT_SOURCE_DIR}/deps/glad/include")
 # note: we don't have to link GLFW/glad here with dear-imgui, since everything will be linked later to make our executable
 
+# Boost...
+# using only the header-only parts so nothing to do here
+
 # reference: https://stackoverflow.com/questions/35411489/add-all-files-under-a-folder-to-a-cmake-glob
 # reference: https://stackoverflow.com/questions/7533502/how-can-i-merge-multiple-lists-of-files-together-with-cmake
 # reference: https://stackoverflow.com/questions/15550777/how-do-i-exclude-a-single-file-from-a-cmake-fileglob-pattern
@@ -145,6 +148,7 @@ add_executable(cpp-xplatform ${PREFIX_ALL_SOURCE_FILES})
 # and src/ is PRIVATE since only private headers reside here and are only needed for internal building
 target_include_directories(cpp-xplatform PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    "${CMAKE_CURRENT_SOURCE_DIR}/deps/boost/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/deps/glad/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/deps/glfw/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/deps/glm"
