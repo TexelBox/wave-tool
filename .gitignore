@@ -1,3 +1,9 @@
+# building...
+[Bb]uild/
+x86/
+x64/
+
+# CMake...
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles
@@ -9,3 +15,7 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
+
+# CUSTOM RULES...
+# force track everything recursively in deps/
+!deps/**
