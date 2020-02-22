@@ -12,8 +12,8 @@
 // Date:    2016-2018
 // Modifications by: Aaron Hornby (10176084)
 // ==========================================================================
-#ifndef PREFIX_IMAGE_BUFFER_H_
-#define PREFIX_IMAGE_BUFFER_H_
+#ifndef WAVE_TOOL_IMAGE_BUFFER_H_
+#define WAVE_TOOL_IMAGE_BUFFER_H_
 
 #include <string>
 #include <vector>
@@ -29,7 +29,7 @@
 // image memory buffer, copying the buffer into an OpenGL window for display,
 // and saving the buffer to disk as an image file.
 
-namespace prefix {
+namespace wave_tool {
     class ImageBuffer {
         public:
             ImageBuffer();
@@ -76,4 +76,4 @@ namespace prefix {
 }
 
 // --------------------------------------------------------------------------
-#endif // PREFIX_IMAGE_BUFFER_H_
+#endif // WAVE_TOOL_IMAGE_BUFFER_H_

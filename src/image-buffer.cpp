@@ -48,7 +48,7 @@
 
 // --------------------------------------------------------------------------
 
-namespace prefix {
+namespace wave_tool {
     ImageBuffer::ImageBuffer()
         : m_textureName(0), m_framebufferObject(0),
         m_width(0), m_height(0), m_modified(false) {}

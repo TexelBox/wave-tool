@@ -21,7 +21,7 @@ endif()
 # https://cmake.org/cmake/help/latest/command/project.html
 # note: including 'C' as a language is necessary to prevent some "CMAKE MISSING INTERNAL VARIABLES ERRORS" that I was getting on Linux
 # reference: https://github.com/google/iree/issues/229
-project(cpp-xplatform LANGUAGES CXX C)
+project(wave-tool LANGUAGES CXX C)
 
 # use C++17 features (globally, for all subsequent targets)
 # https://crascit.com/2015/03/28/enabling-cxx11-in-cmake/
@@ -101,9 +101,9 @@ target_include_directories(glad PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/deps/glad/i
 
 # Dear ImGui...
 # reference: https://retifrav.github.io/blog/2019/08/04/glfw-dear-imgui/
-file(GLOB PREFIX_DEAR_IMGUI_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/*.h")
-list(APPEND PREFIX_DEAR_IMGUI_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/examples/imgui_impl_glfw.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/examples/imgui_impl_glfw.h" "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/examples/imgui_impl_opengl3.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/examples/imgui_impl_opengl3.h")
-add_library(dear-imgui STATIC ${PREFIX_DEAR_IMGUI_SOURCE_FILES})
+file(GLOB WAVE_TOOL_DEAR_IMGUI_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/*.h")
+list(APPEND WAVE_TOOL_DEAR_IMGUI_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/examples/imgui_impl_glfw.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/examples/imgui_impl_glfw.h" "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/examples/imgui_impl_opengl3.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/examples/imgui_impl_opengl3.h")
+add_library(dear-imgui STATIC ${WAVE_TOOL_DEAR_IMGUI_SOURCE_FILES})
 # note: must include GLFW and glad, since that is the implementation we are using
 target_include_directories(dear-imgui PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui" "${CMAKE_CURRENT_SOURCE_DIR}/deps/glfw/include" "${CMAKE_CURRENT_SOURCE_DIR}/deps/glad/include")
 # note: we don't have to link GLFW/glad here with dear-imgui, since everything will be linked later to make our executable
@@ -128,16 +128,16 @@ target_include_directories(dear-imgui PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/deps/
 # 4. in both ways, you have to do something manually, and I feel a "touch" is easier than writing a bunch of filenames here in this script
 # 5. globbing could result in false positives, but these could be rare and can be fixed with REMOVE_ITEM or partial manual listing
 # note: apparently cmake 3.12 added a CONFIGURE_DEPENDS option that reruns cmake when glob value changes, but this seems like it could be problematic with different generators and could slow down the build pipeline a bit
-file(GLOB_RECURSE PREFIX_SOURCE_FILES_IN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cxx" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c++" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.hh" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h++")
+file(GLOB_RECURSE WAVE_TOOL_SOURCE_FILES_IN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cxx" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c++" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.hh" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h++")
 # note: you will also have to add paths to any dependency sources only when they are required to be built directly with your files
-list(APPEND PREFIX_ALL_SOURCE_FILES ${PREFIX_SOURCE_FILES_IN_SRC_DIR})
-message(STATUS "main target source files = ${PREFIX_ALL_SOURCE_FILES}")
-# adds an executable target called <cpp-xplatform> to be built from the source files listed
+list(APPEND WAVE_TOOL_ALL_SOURCE_FILES ${WAVE_TOOL_SOURCE_FILES_IN_SRC_DIR})
+message(STATUS "main target source files = ${WAVE_TOOL_ALL_SOURCE_FILES}")
+# adds an executable target called <wave-tool> to be built from the source files listed
 # the source files can be removed from here and specified later using target_sources()
 # https://cmake.org/cmake/help/latest/command/add_executable.html
 # warning: use CMAKE_CURRENT_SOURCE_DIR rather than CMAKE_SOURCE_DIR since the the latter points to the src directory of the parent project. So, if my project is a sub-project of another then mine won't build
 # https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/issues/1428
-add_executable(cpp-xplatform ${PREFIX_ALL_SOURCE_FILES})
+add_executable(wave-tool ${WAVE_TOOL_ALL_SOURCE_FILES})
 
 # reference: https://pabloariasal.github.io/2018/02/19/its-time-to-do-cmake-right/
 # SCOPE SPECIFIERS...
@@ -146,7 +146,7 @@ add_executable(cpp-xplatform ${PREFIX_ALL_SOURCE_FILES})
 # PUBLIC = both PRIVATE and INTERFACE
 # thus the include/ directory is PUBLIC since it is needed for both internally building target and external users to possess
 # and src/ is PRIVATE since only private headers reside here and are only needed for internal building
-target_include_directories(cpp-xplatform PRIVATE
+target_include_directories(wave-tool PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
     "${CMAKE_CURRENT_SOURCE_DIR}/deps/boost/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/deps/glad/include"
@@ -163,7 +163,7 @@ target_include_directories(cpp-xplatform PRIVATE
 # note: if additional warning flags are to be added, I believe the project would have to be clean-rebuilt to apply the new warning detection to previously compiled files
 # note: for some reason, the cmakecache file doesn't reflect these changes (e.g. still says default of /W3), but they seem to still apply correctly
 # DEPRECATED (cotire doesn't work well will some generator expressions, like the ones below...)
-#target_compile_options(cpp-xplatform PRIVATE
+#target_compile_options(wave-tool PRIVATE
 #    $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
 #        -Wall -Wextra>
 #        # opt. could add -Werror (if your libs don't throw so many warnings or you have good warning policy handling)
@@ -174,18 +174,18 @@ target_include_directories(cpp-xplatform PRIVATE
 
 # reference: https://stackoverflow.com/questions/10046114/in-cmake-how-can-i-test-if-the-compiler-is-clang
 if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(cpp-xplatform PRIVATE -Wall -Wextra)
+    target_compile_options(wave-tool PRIVATE -Wall -Wextra)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    target_compile_options(cpp-xplatform PRIVATE /W4)
+    target_compile_options(wave-tool PRIVATE /W4)
 endif()
 
 # reference: https://cmake.org/cmake/help/v3.10/module/FindOpenGL.html
 # reference: https://www.glfw.org/docs/latest/build_guide.html#build_link_cmake_source
 # I think that the order matters in some cases (i've seen that a lib on the left depends on a lib to the right of it)
-target_link_libraries(cpp-xplatform PRIVATE dear-imgui glad glfw OpenGL::GL)
+target_link_libraries(wave-tool PRIVATE dear-imgui glad glfw OpenGL::GL)
 
 # reference: https://stackoverflow.com/questions/7304625/how-do-i-change-the-startup-project-of-a-visual-studio-solution-via-cmake
 # sets the startup project in the Visual Studio solution (so that user doesn't have to explicitly right click target and set option)
 if(MSVC)
-    set_property(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" PROPERTY VS_STARTUP_PROJECT cpp-xplatform)
+    set_property(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" PROPERTY VS_STARTUP_PROJECT wave-tool)
 endif()

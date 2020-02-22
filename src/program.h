@@ -6,14 +6,14 @@
  * Modifications by: Aaron Hornby (10176084)
  */
 
-#ifndef PREFIX_PROGRAM_H_
-#define PREFIX_PROGRAM_H_
+#ifndef WAVE_TOOL_PROGRAM_H_
+#define WAVE_TOOL_PROGRAM_H_
 
 //#include "image-buffer.h"
 
 struct GLFWwindow;
 
-namespace prefix {
+namespace wave_tool {
     class Program {
         public:
             Program();
@@ -44,4 +44,4 @@ namespace prefix {
     void windowSizeCallback(GLFWwindow *window, int width, int height);
 }
 
-#endif // PREFIX_PROGRAM_H_
+#endif // WAVE_TOOL_PROGRAM_H_

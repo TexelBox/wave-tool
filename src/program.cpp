@@ -21,7 +21,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
-namespace prefix {
+namespace wave_tool {
     Program::Program() {}
 
     Program::~Program() {}
