@@ -23,7 +23,7 @@ namespace prefix {
             bool start();
         private:
             //ImageBuffer image;
-            GLFWwindow *window = NULL;
+            GLFWwindow *window = nullptr;
 
             // prints system specs to the console
             void queryGLVersion();

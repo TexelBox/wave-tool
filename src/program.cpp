@@ -67,7 +67,7 @@ namespace prefix {
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         int const WIDTH = 1024;
         int const HEIGHT = 1024;
-        window = glfwCreateWindow(WIDTH, HEIGHT, "WaveTool", NULL, NULL);
+        window = glfwCreateWindow(WIDTH, HEIGHT, "WaveTool", nullptr, nullptr);
         if (!window) {
             std::cout << "ERROR: Program failed to create GLFW window, TERMINATING..." << std::endl;
             glfwTerminate();
