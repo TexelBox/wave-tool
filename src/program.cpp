@@ -130,11 +130,11 @@ namespace wave_tool {
 
         // draw a symmetrical grid for each cartesian plane...
 
-        //NOTE: compare this to far clipping plane distance of 2000
+        //NOTE: compare this to far clipping plane distance of 5000
         //NOTE: all these should be the same
-        int const maxX = 500;
-        int const maxY = 500;
-        int const maxZ = 500;
+        int const maxX = 2500;
+        int const maxY = 2500;
+        int const maxZ = 2500;
         //NOTE: any change here should be reflected in the ImGui notice
         int const deltaX = 10;
         int const deltaY = 10;
@@ -207,6 +207,7 @@ namespace wave_tool {
         m_renderEngine->assignBuffers(*m_xyPlane);
 
         // yoshi placeholder...
+        /*
         std::shared_ptr<MeshObject> yoshi = ObjectLoader::createTriMeshObject("../assets/models/imports/yoshi.obj", false, true);
         if (nullptr != yoshi) {
             if (yoshi->hasTexture) {
@@ -218,8 +219,22 @@ namespace wave_tool {
             m_meshObjects.push_back(yoshi);
             m_renderEngine->assignBuffers(*yoshi);
         }
+        */
 
-        //TODO: in the future, allow users to load in different terrains? (it would be nice to get program to work dynamically with water terrain it comes across)
+        //TODO: in the future, allow users to load in different terrains? (it would be nice to get program to work dynamically with whatever terrain it comes across) - probably not since finding terrain that works with my loader is hell
+        // terrain...
+        m_terrain = ObjectLoader::createTriMeshObject("../assets/models/imports/everest.obj");
+        if (nullptr != m_terrain) {
+            if (m_terrain->hasTexture) {
+                m_terrain->textureID = m_renderEngine->load2DTexture("../assets/textures/everest.png");
+                // if there was an error...
+                if (0 == m_terrain->textureID) m_terrain->textureID = m_renderEngine->load2DTexture("../assets/textures/default.png"); // fallback#1 (if this fails too for some reason, then the model will most likely be black or undefined colour)
+            }
+            //m_terrain->generateNormals();
+            m_terrain->setScale(glm::vec3(1000.0f, 1000.0f, 1000.0f));
+            m_meshObjects.push_back(m_terrain);
+            m_renderEngine->assignBuffers(*m_terrain);
+        }
     }
 
     void Program::queryGLVersion() {

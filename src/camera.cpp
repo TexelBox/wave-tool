@@ -2,7 +2,7 @@
 
 namespace wave_tool {
     Camera::Camera() {
-        eye = glm::vec3(0.0f,0.0f, 6.0f);
+        eye = glm::vec3(0.0f, 1000.0f, 1000.0f);
         up = glm::vec3(0.0f, 1.0f, 0.0f);
         centre = glm::vec3(0.0f, 0.0f, 0.0f);
 

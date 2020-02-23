@@ -14,7 +14,7 @@ namespace wave_tool {
 
         //NOTE: currently placing the light at the top of the y-axis
         lightPos = glm::vec3(0.0f, 500.0f, 0.0f);
-        projection = glm::perspective(45.0f, (float)width / height, 0.01f, 2000.0f);
+        projection = glm::perspective(45.0f, (float)width / height, 1.0f, 5000.0f);
 
         // Set OpenGL state
         glEnable(GL_DEPTH_TEST);
@@ -226,7 +226,7 @@ namespace wave_tool {
 
     // Sets projection and viewport for new width and height
     void RenderEngine::setWindowSize(int width, int height) {
-        projection = glm::perspective(45.0f, (float)width / height, 0.01f, 2000.0f);
+        projection = glm::perspective(45.0f, (float)width / height, 1.0f, 5000.0f);
         glViewport(0, 0, width, height);
     }
 }
