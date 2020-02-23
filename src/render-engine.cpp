@@ -1,5 +1,8 @@
 #include "render-engine.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb/stb_image.h>
+
 namespace wave_tool {
     RenderEngine::RenderEngine(GLFWwindow *window, std::shared_ptr<Camera> camera) : window(window), camera(camera) {
         int width, height;
@@ -199,19 +202,21 @@ namespace wave_tool {
     }
 
     // Creates a 2D texture
-    unsigned int RenderEngine::loadTexture(std::string filename) {
-        //reading model texture image
-        std::vector<unsigned char> _image;
-        unsigned int _imageWidth, _imageHeight;
-
-        unsigned int error = lodepng::decode(_image, _imageWidth, _imageHeight, filename.c_str());
-        if (error)
-        {
-            std::cout << "reading error" << error << ":" << lodepng_error_text(error) << std::endl;
+    // reference: https://learnopengl.com/Getting-started/Textures
+    GLuint RenderEngine::load2DTexture(std::string const& filePath) {
+        int width, height, nrChannels;
+        stbi_set_flip_vertically_on_load(true);
+        unsigned char *data = stbi_load(filePath.c_str(), &width, &height, &nrChannels, STBI_rgb_alpha); // force RGBA conversion, but original number of 8-bit channels will remain in nrChannels
+        if (nullptr == data) {
+            std::cout << "ERROR: failed to read texture at path: " << filePath << std::endl;
+            return 0; // error code (no OpenGL object can have id 0)
         }
 
-        unsigned int id = Texture::create2DTexture(_image, _imageWidth, _imageHeight);
-        return id;
+        GLuint const textureID = Texture::create2DTexture(data, width, height);
+        stbi_image_free(data);
+        if (0 == textureID) std::cout << "ERROR: failed to create texture at path: " << filePath << std::endl;
+
+        return textureID;
     }
 
     // Updates lightPos by specified value

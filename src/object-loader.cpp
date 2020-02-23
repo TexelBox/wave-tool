@@ -114,7 +114,7 @@ namespace wave_tool {
                     uv.x = std::stof(words.at(0));
                     uv.y = std::stof(words.at(1));
                     //TODO: could add error checking here to make sure both U and V are in range [0.0f, 1.0f]
-                    uv.y *= -1; //NOTE: MUST FLIP THE V COORD HERE!
+                    //uv.y *= -1; //NOTE: MUST FLIP THE V COORD HERE! - don't have to do this anymore since stb can flip texture
                     //uv.y = 1.0f - uv.y; //NOTE: this seems to work as well, but i'll go with the above fix since it was present in old obj loader
                     out_uvs.push_back(uv);
                 }

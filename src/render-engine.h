@@ -14,8 +14,6 @@
 #include "shader-tools.h"
 #include "texture.h"
 
-#include "lodepng.h"
-
 namespace wave_tool {
     class RenderEngine {
         public:
@@ -30,7 +28,7 @@ namespace wave_tool {
 
             void updateLightPos(glm::vec3 add);
 
-            unsigned int loadTexture(std::string filename);
+            GLuint load2DTexture(std::string const& filePath);
         private:
             GLFWwindow *window = nullptr;
             std::shared_ptr<Camera> camera = nullptr;

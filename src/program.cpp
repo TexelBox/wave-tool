@@ -209,7 +209,11 @@ namespace wave_tool {
         // yoshi placeholder...
         std::shared_ptr<MeshObject> yoshi = ObjectLoader::createTriMeshObject("../assets/models/imports/yoshi.obj", false, true);
         if (nullptr != yoshi) {
-            if (yoshi->hasTexture) yoshi->textureID = m_renderEngine->loadTexture("../assets/textures/yoshi.png");
+            if (yoshi->hasTexture) {
+                yoshi->textureID = m_renderEngine->load2DTexture("../assets/textures/yoshi.png");
+                // if there was an error...
+                if (0 == yoshi->textureID) yoshi->textureID = m_renderEngine->load2DTexture("../assets/textures/default.png"); // fallback#1 (if this fails too for some reason, then the model will most likely be black or undefined colour)
+            }
             yoshi->generateNormals();
             m_meshObjects.push_back(yoshi);
             m_renderEngine->assignBuffers(*yoshi);
