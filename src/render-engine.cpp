@@ -8,13 +8,14 @@ namespace wave_tool {
         int width, height;
         glfwGetWindowSize(window, &width, &height);
 
+        skyboxProgram = ShaderTools::compileShaders("../assets/shaders/skybox.vert", "../assets/shaders/skybox.frag");
         trivialProgram = ShaderTools::compileShaders("../assets/shaders/trivial.vert", "../assets/shaders/trivial.frag");
         mainProgram = ShaderTools::compileShaders("../assets/shaders/main.vert", "../assets/shaders/main.frag");
         lightProgram = ShaderTools::compileShaders("../assets/shaders/light.vert", "../assets/shaders/light.frag");
 
         //NOTE: currently placing the light at the top of the y-axis
         lightPos = glm::vec3(0.0f, 500.0f, 0.0f);
-        projection = glm::perspective(glm::radians(72.0f), (float)width / height, 1.0f, 5000.0f);
+        projection = glm::perspective(glm::radians(72.0f), (float)width / height, 0.1f, 5000.0f); //NOTE: near distance must be small enough to not conflict with skybox size
 
         // Set OpenGL state
         glEnable(GL_DEPTH_TEST);
@@ -24,14 +25,43 @@ namespace wave_tool {
     }
 
     // Called to render provided objects under view matrix
-    void RenderEngine::render(std::vector<std::shared_ptr<MeshObject>> const& objects) {
+    void RenderEngine::render(std::shared_ptr<const MeshObject> skybox, std::vector<std::shared_ptr<MeshObject>> const& objects) {
         glm::mat4 const view = camera->getLookAt();
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glUseProgram(mainProgram);
 
+        // render skybox first...
+        // reference: https://learnopengl.com/Advanced-OpenGL/Cubemaps
+        // reference: http://antongerdelan.net/opengl/cubemaps.html
+        if (nullptr != skybox && skybox->m_isVisible) {
+            // disable depth writing to draw skybox behind everything else
+            glDepthMask(GL_FALSE);
+            // enable skybox shader
+            glUseProgram(skyboxProgram);
+            glm::mat4 const viewNoTranslation = glm::mat4(glm::mat3(view));
+            glm::mat4 const VPNoTranslation = projection * viewNoTranslation;
+            // set VP matrix uniform in shader program
+            glUniformMatrix4fv(glGetUniformLocation(skyboxProgram, "VPNoTranslation"), 1, GL_FALSE, glm::value_ptr(VPNoTranslation));
+            // bind geometry data...
+            glBindVertexArray(skybox->vao);
+            // bind texture...
+            glActiveTexture(GL_TEXTURE0 + skybox->textureID);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, skybox->textureID);
+            // set skybox samplerCube uniform in shader program
+            glUniform1i(glGetUniformLocation(skyboxProgram, "skybox"), skybox->textureID);
+            // POINT, LINE or FILL...
+            glPolygonMode(GL_FRONT_AND_BACK, skybox->m_polygonMode);
+            glDrawElements(skybox->m_primitiveMode, skybox->drawFaces.size(), GL_UNSIGNED_INT, (void*)0);
+            glBindVertexArray(0); // unbind vao
+            // unbind texture...
+            glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+            // re-enable depth writing for next geometry
+            glDepthMask(GL_TRUE);
+        }
+
+        glUseProgram(mainProgram);
         for (std::shared_ptr<MeshObject const> o : objects) {
             // don't render invisible objects...
             if (!o->m_isVisible) continue;
@@ -219,6 +249,60 @@ namespace wave_tool {
         return textureID;
     }
 
+    // reference: https://learnopengl.com/Advanced-OpenGL/Cubemaps
+    // reference: https://www.html5gamedevs.com/topic/40806-where-can-you-find-skybox-textures/
+    // modified a bit to not leak texture memory if an error happens
+    // assumes 6 faces are given in order (px,nx,py,ny,pz,nz)
+    GLuint RenderEngine::loadCubemap(std::vector<std::string> const& faces) {
+        if (6 != faces.size()) return 0; // error code (no OpenGL object can have id 0)
+
+        int width, height, nrChannels;
+        stbi_set_flip_vertically_on_load(false); // cubemap textures shouldn't be flipped
+        unsigned char *dataArr[6] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+        for (unsigned int i = 0; i < 6; ++i) {
+            unsigned char *data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, STBI_rgb_alpha); // force RGBA conversion, but original number of 8-bit channels will remain in nrChannels
+            if (nullptr == data) {
+                std::cout << "ERROR: failed to read cubemap texture at path: " << faces[i] << std::endl;
+                // cleanup previous read data...
+                for (unsigned int j = 0; j < i; ++j) {
+                    stbi_image_free(dataArr[j]);
+                    dataArr[j] = nullptr;
+                }
+                return 0; // error code (no OpenGL object can have id 0)
+            }
+            // get here if this image file was read correctly
+            dataArr[i] = data;
+        }
+        // get here if all 6 image files were read correctly
+        GLuint textureID;
+        glGenTextures(1, &textureID);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+        // set options on currently bound texture object...
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        /*
+        enum order (incremented by 1)
+        GL_TEXTURE_CUBE_MAP_POSITIVE_X
+        GL_TEXTURE_CUBE_MAP_NEGATIVE_X
+        GL_TEXTURE_CUBE_MAP_POSITIVE_Y
+        GL_TEXTURE_CUBE_MAP_NEGATIVE_Y
+        GL_TEXTURE_CUBE_MAP_POSITIVE_Z
+        GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
+        */
+        for (unsigned int i = 0; i < 6; i++) {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, dataArr[i]); // save data in VRAM
+            // cleanup...
+            stbi_image_free(dataArr[i]);
+            dataArr[i] = nullptr;
+        }
+
+        return textureID;
+    }
+
     // Updates lightPos by specified value
     void RenderEngine::updateLightPos(glm::vec3 add) {
         lightPos += add;
@@ -226,7 +310,7 @@ namespace wave_tool {
 
     // Sets projection and viewport for new width and height
     void RenderEngine::setWindowSize(int width, int height) {
-        projection = glm::perspective(glm::radians(72.0f), (float)width / height, 1.0f, 5000.0f);
+        projection = glm::perspective(glm::radians(72.0f), (float)width / height, 0.1f, 5000.0f); //NOTE: near distance must be small enough to not conflict with skybox size
         glViewport(0, 0, width, height);
     }
 }

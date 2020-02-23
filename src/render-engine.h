@@ -19,7 +19,7 @@ namespace wave_tool {
         public:
             RenderEngine(GLFWwindow *window, std::shared_ptr<Camera> camera);
 
-            void render(std::vector<std::shared_ptr<MeshObject>> const& objects);
+            void render(std::shared_ptr<const MeshObject> skybox, std::vector<std::shared_ptr<MeshObject>> const& objects);
             void renderLight();
             void assignBuffers(MeshObject &object);
             void updateBuffers(MeshObject &object, bool const updateVerts, bool const updateUVs, bool const updateNormals, bool const updateColours);
@@ -29,10 +29,12 @@ namespace wave_tool {
             void updateLightPos(glm::vec3 add);
 
             GLuint load2DTexture(std::string const& filePath);
+            GLuint loadCubemap(std::vector<std::string> const& faces);
         private:
             GLFWwindow *window = nullptr;
             std::shared_ptr<Camera> camera = nullptr;
 
+            GLuint skyboxProgram;
             GLuint trivialProgram;
             GLuint mainProgram;
             GLuint lightProgram;

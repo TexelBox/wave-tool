@@ -33,6 +33,7 @@ namespace wave_tool {
             //ImageBuffer image;
             std::vector<std::shared_ptr<MeshObject>> m_meshObjects;
             std::shared_ptr<RenderEngine> m_renderEngine = nullptr;
+            std::shared_ptr<MeshObject> m_skybox = nullptr;
             std::shared_ptr<MeshObject> m_terrain = nullptr;
             std::shared_ptr<MeshObject> m_waterGrid = nullptr;
             GLFWwindow *m_window = nullptr;

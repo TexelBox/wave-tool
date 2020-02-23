@@ -58,7 +58,7 @@ namespace wave_tool {
             // rendering...
             ImGui::Render();
             //image.Render();
-            m_renderEngine->render(m_meshObjects);
+            m_renderEngine->render(m_skybox, m_meshObjects);
 
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -220,6 +220,29 @@ namespace wave_tool {
             m_renderEngine->assignBuffers(*yoshi);
         }
         */
+
+        //TODO: save a bunch of skyboxes that can be toggled back and forth (along with sun position?)
+        // hard-coded skybox...
+        m_skybox = ObjectLoader::createTriMeshObject("../assets/models/imports/cube.obj", true, true);
+        if (nullptr != m_skybox) {
+            m_skybox->textureID = m_renderEngine->loadCubemap({"../assets/textures/skyboxes/sunny/TropicalSunnyDay_px.jpg",
+                                                               "../assets/textures/skyboxes/sunny/TropicalSunnyDay_nx.jpg",
+                                                               "../assets/textures/skyboxes/sunny/TropicalSunnyDay_py.jpg",
+                                                               "../assets/textures/skyboxes/sunny/TropicalSunnyDay_ny.jpg",
+                                                               "../assets/textures/skyboxes/sunny/TropicalSunnyDay_pz.jpg",
+                                                               "../assets/textures/skyboxes/sunny/TropicalSunnyDay_nz.jpg"});
+            // if there was an error
+            // fallback#1 (use debug skybox) (if this fails too for some reason, then there won't be a skybox)
+            if (0 == m_skybox->textureID) m_skybox->textureID = m_renderEngine->loadCubemap({"../assets/textures/skyboxes/debug/_px.jpg",
+                                                                                             "../assets/textures/skyboxes/debug/_nx.jpg",
+                                                                                             "../assets/textures/skyboxes/debug/_py.jpg",
+                                                                                             "../assets/textures/skyboxes/debug/_ny.jpg",
+                                                                                             "../assets/textures/skyboxes/debug/_pz.jpg",
+                                                                                             "../assets/textures/skyboxes/debug/_nz.jpg"});
+            // fallback#2 (no skybox, you will just see the clear colour)
+            if (0 == m_skybox->textureID) m_skybox = nullptr;
+        }
+        m_renderEngine->assignBuffers(*m_skybox);
 
         //TODO: in the future, allow users to load in different terrains? (it would be nice to get program to work dynamically with whatever terrain it comes across) - probably not since finding terrain that works with my loader is hell
         // terrain...

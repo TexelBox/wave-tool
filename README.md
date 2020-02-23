@@ -98,7 +98,8 @@ Many thanks to the contributors of the following projects! Please check them out
 ---
 
 ### References
-- mainly implementing features outlined by <a href="https://fileadmin.cs.lth.se/graphics/theses/projects/projgrid/projgrid-hq.pdf" target="_blank">Real-time water rendering / Introducing the projected grid concept - Claes Johanson [2004].</a>
+- mainly implementing features outlined by <a href="https://fileadmin.cs.lth.se/graphics/theses/projects/projgrid/projgrid-hq.pdf" target="_blank">Real-time water rendering / Introducing the projected grid concept - Claes Johanson [2004]</a>.
+- uses some skybox textures from <a href="https://github.com/BabylonJS/Babylon.js/tree/master/Playground/textures" target="_blank">Babylon.js</a>.
 
 ---
 
