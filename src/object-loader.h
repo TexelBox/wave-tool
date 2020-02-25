@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <map>
+#include <memory>
 #include <vector>
 #include <glm/glm.hpp>
 #include <string>

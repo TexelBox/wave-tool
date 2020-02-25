@@ -107,6 +107,9 @@ add_library(dear-imgui STATIC ${WAVE_TOOL_DEAR_IMGUI_SOURCE_FILES})
 # note: must include GLFW and glad, since that is the implementation we are using
 target_include_directories(dear-imgui PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui" "${CMAKE_CURRENT_SOURCE_DIR}/deps/glfw/include" "${CMAKE_CURRENT_SOURCE_DIR}/deps/glad/include")
 # note: we don't have to link GLFW/glad here with dear-imgui, since everything will be linked later to make our executable
+# this definition is required to fix compile errors where it tries to find GLEW by default on certain platforms (e.g. Linux)
+# reference: https://stackoverflow.com/questions/57535712/how-to-structure-a-cmake-project-with-different-3rd-party-libraries
+target_compile_definitions(dear-imgui PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD)
 
 # Boost...
 # using only the header-only parts so nothing to do here
