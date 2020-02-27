@@ -21,7 +21,7 @@ namespace wave_tool {
             RenderEngine(GLFWwindow *window, std::shared_ptr<Camera> camera);
 
             void render(std::shared_ptr<const MeshObject> skybox, std::vector<std::shared_ptr<MeshObject>> const& objects);
-            void renderLight();
+            //void renderLight();
             void assignBuffers(MeshObject &object);
             void updateBuffers(MeshObject &object, bool const updateVerts, bool const updateUVs, bool const updateNormals, bool const updateColours);
 
@@ -38,7 +38,7 @@ namespace wave_tool {
             GLuint skyboxProgram;
             GLuint trivialProgram;
             GLuint mainProgram;
-            GLuint lightProgram;
+            //GLuint lightProgram;
 
             glm::mat4 projection;
             glm::vec3 lightPos;

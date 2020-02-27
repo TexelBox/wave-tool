@@ -11,7 +11,7 @@ namespace wave_tool {
         skyboxProgram = ShaderTools::compileShaders("../assets/shaders/skybox.vert", "../assets/shaders/skybox.frag");
         trivialProgram = ShaderTools::compileShaders("../assets/shaders/trivial.vert", "../assets/shaders/trivial.frag");
         mainProgram = ShaderTools::compileShaders("../assets/shaders/main.vert", "../assets/shaders/main.frag");
-        lightProgram = ShaderTools::compileShaders("../assets/shaders/light.vert", "../assets/shaders/light.frag");
+        //lightProgram = ShaderTools::compileShaders("../assets/shaders/light.vert", "../assets/shaders/light.frag");
 
         //NOTE: currently placing the light at the top of the y-axis
         lightPos = glm::vec3(0.0f, 500.0f, 0.0f);
@@ -89,9 +89,10 @@ namespace wave_tool {
             glBindVertexArray(0);
             Texture::unbind2DTexture();
         }
-        renderLight();
+        //renderLight();
     }
 
+/*
     // Renders the current position of the light as a point
     void RenderEngine::renderLight() {
         glUseProgram(lightProgram);
@@ -104,6 +105,7 @@ namespace wave_tool {
 
         glDrawArrays(GL_POINTS, 0, 1);
     }
+*/
 
     // Assigns and binds buffers for a Mesh Object - vertices, normals, UV coordinates, faces
     void RenderEngine::assignBuffers(MeshObject &object)
