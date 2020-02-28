@@ -26,10 +26,11 @@ namespace wave_tool {
             Program();
             ~Program();
 
+            std::shared_ptr<RenderEngine> getRenderEngine() const;
+
             // runs the user defined program (including render loop)
             bool start();
         private:
-            std::shared_ptr<Camera> m_camera = nullptr;
             //ImageBuffer image;
             std::vector<std::shared_ptr<MeshObject>> m_meshObjects;
             std::shared_ptr<RenderEngine> m_renderEngine = nullptr;

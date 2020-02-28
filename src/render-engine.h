@@ -18,7 +18,9 @@
 namespace wave_tool {
     class RenderEngine {
         public:
-            RenderEngine(GLFWwindow *window, std::shared_ptr<Camera> camera);
+            RenderEngine(GLFWwindow *window);
+
+            std::shared_ptr<Camera> getCamera() const;
 
             void render(std::shared_ptr<const MeshObject> skybox, std::vector<std::shared_ptr<MeshObject>> const& objects);
             //void renderLight();
@@ -32,15 +34,13 @@ namespace wave_tool {
             GLuint load2DTexture(std::string const& filePath);
             GLuint loadCubemap(std::vector<std::string> const& faces);
         private:
-            GLFWwindow *window = nullptr;
-            std::shared_ptr<Camera> camera = nullptr;
+            std::shared_ptr<Camera> m_camera = nullptr;
 
             GLuint skyboxProgram;
             GLuint trivialProgram;
             GLuint mainProgram;
             //GLuint lightProgram;
 
-            glm::mat4 projection;
             glm::vec3 lightPos;
     };
 }

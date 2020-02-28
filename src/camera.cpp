@@ -1,53 +1,93 @@
+// reference: https://learnopengl.com/Getting-started/Camera
+
 #include "camera.h"
 
+#include <glm/gtc/matrix_transform.hpp>
+
 namespace wave_tool {
-    Camera::Camera() {
-        eye = glm::vec3(0.0f, 1000.0f, 1000.0f);
-        up = glm::vec3(0.0f, 1.0f, 0.0f);
-        centre = glm::vec3(0.0f, 0.0f, 0.0f);
+    // init statics...
+    glm::vec3 const Camera::DEFAULT_FORWARD = glm::vec3(0.0f, 0.0f, -1.0f);
+    float const Camera::DEFAULT_PITCH = 0.0f;
+    glm::vec3 const Camera::DEFAULT_POSITION = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 const Camera::DEFAULT_RIGHT = glm::vec3(1.0f, 0.0f, 0.0f);
+    glm::vec3 const Camera::DEFAULT_UP = glm::vec3(0.0f, 1.0f, 0.0f);
+    float const Camera::DEFAULT_YAW = -90.0f;
 
-        longitudeRotRad = 0;
-        latitudeRotRad = 0;
+    Camera::Camera(float const fov, float const aspect, float const nearClipDistance, float const farClipDistance, glm::vec3 const& position, glm::vec3 const& forward, glm::vec3 const& up, float const yaw, float const pitch)
+        : m_fov(fov), m_aspect(aspect), m_nearClipDistance(nearClipDistance), m_farClipDistance(farClipDistance), m_position(position), m_forward(forward), m_up(up), m_yaw(yaw), m_pitch(pitch)
+    {
+        m_upInit = m_up;
+        m_right = glm::cross(m_forward, m_up);
+        updateBasisVectors();
+        updateProjectionMat();
     }
 
-    Camera::~Camera() {
-        // nothing to do here
+    glm::mat4 Camera::getProjectionMat() const {
+        return m_projectionMat;
     }
 
-    // Returns view matrix for the camera
-    glm::mat4 Camera::getLookAt() {
-        glm::vec3 eyeTemp = glm::rotateY(eye, -longitudeRotRad);
-        eyeTemp = glm::rotate(eyeTemp, latitudeRotRad, glm::cross(eyeTemp, glm::vec3(0.0, 1.0, 0.0)));
-
-        return glm::lookAt(eyeTemp, centre, up);
+    glm::mat4 Camera::getViewMat() const {
+        return m_viewMat;
     }
 
-    // Returns position of the camera
-    glm::vec3 Camera::getPosition() {
-        glm::vec3 eyeTemp = glm::rotateY(eye, -longitudeRotRad);
-        eyeTemp = glm::rotate(eyeTemp, latitudeRotRad, glm::cross(eyeTemp, glm::vec3(0.0, 1.0, 0.0)));
+    void Camera::rotate(float const deltaYawDegrees, float const deltaPitchDegrees) {
+        m_yaw = glm::mod(m_yaw + deltaYawDegrees, 360.0f);
+        m_pitch = glm::clamp(m_pitch + deltaPitchDegrees, -89.0f, 89.0f);
 
-        return eyeTemp;
+        updateBasisVectors();
     }
 
-    // Rotates camera along longitudinal axis (spherical coords)
-    void Camera::updateLongitudeRotation(float rad) {
-        longitudeRotRad += rad * M_PI/180;
+    void Camera::setAspect(float const aspect) {
+        m_aspect = aspect;
+
+        updateProjectionMat();
     }
 
-    // Rotates camera along latitudinal axis (spherical coords)
-    void Camera::updateLatitudeRotation(float rad) {
-        latitudeRotRad += rad * M_PI/180;
-        if (latitudeRotRad > M_PI/2 - 0.01f) {
-            latitudeRotRad = M_PI/2 - 0.01f;
-        }
-        else if (latitudeRotRad < -M_PI/2 + 0.01f) {
-            latitudeRotRad = -M_PI/2 + 0.01f;
-        }
+    void Camera::translate(glm::vec3 const& deltaPosition) {
+        m_position += deltaPosition;
+
+        updateViewMat();
     }
 
-    // Update camera eye position by specified value
-    void Camera::updatePosition(glm::vec3 value) {
-        eye += value;
+    void Camera::translateForward(float const delta) {
+        m_position += m_forward * delta;
+
+        updateViewMat();
+    }
+
+    void Camera::translateRight(float const delta) {
+        m_position += m_right * delta;
+
+        updateViewMat();
+    }
+
+    void Camera::translateUp(float const delta) {
+        m_position += m_up * delta;
+
+        updateViewMat();
+    }
+
+    void Camera::zoom(float const deltaFOV) {
+        m_fov = glm::clamp(m_fov + deltaFOV, 15.0f, 105.0f);
+
+        updateProjectionMat();
+    }
+
+    void Camera::updateBasisVectors() {
+        m_forward = glm::normalize(glm::vec3(glm::cos(glm::radians(m_yaw)) * glm::cos(glm::radians(m_pitch)),
+                                             glm::sin(glm::radians(m_pitch)),
+                                             glm::sin(glm::radians(m_yaw)) * glm::cos(glm::radians(m_pitch))));
+        m_right = glm::normalize(glm::cross(m_forward, m_upInit));
+        m_up = glm::normalize(glm::cross(m_right, m_forward));
+
+        updateViewMat();
+    }
+
+    void Camera::updateProjectionMat() {
+        m_projectionMat = glm::perspective(glm::radians(m_fov), m_aspect, m_nearClipDistance, m_farClipDistance);
+    }
+
+    void Camera::updateViewMat() {
+        m_viewMat = glm::lookAt(m_position, m_position + m_forward, m_up);
     }
 }

@@ -21,7 +21,6 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
-#include "camera.h"
 #include "input-handler.h"
 #include "mesh-object.h"
 #include "object-loader.h"
@@ -32,12 +31,14 @@ namespace wave_tool {
 
     Program::~Program() {}
 
+    std::shared_ptr<RenderEngine> Program::getRenderEngine() const {
+        return m_renderEngine;
+    }
+
     bool Program::start() {
         if (!setupWindow()) return false;
 
-        m_camera = std::make_shared<Camera>();
-        m_renderEngine = std::make_shared<RenderEngine>(m_window, m_camera);
-        InputHandler::setUp(m_renderEngine, m_camera);
+        m_renderEngine = std::make_shared<RenderEngine>(m_window);
 
         initScene();
 

@@ -4,9 +4,12 @@
 #include <stb/stb_image.h>
 
 namespace wave_tool {
-    RenderEngine::RenderEngine(GLFWwindow *window, std::shared_ptr<Camera> camera) : window(window), camera(camera) {
+    RenderEngine::RenderEngine(GLFWwindow *window) {
         int width, height;
         glfwGetWindowSize(window, &width, &height);
+
+        //NOTE: near distance must be small enough to not conflict with skybox size
+        m_camera = std::make_shared<Camera>(72.0f, (float)width / height, 0.1f, 5000.0f, glm::vec3(0.0f, 1000.0f, 1000.0f));
 
         skyboxProgram = ShaderTools::compileShaders("../assets/shaders/skybox.vert", "../assets/shaders/skybox.frag");
         trivialProgram = ShaderTools::compileShaders("../assets/shaders/trivial.vert", "../assets/shaders/trivial.frag");
@@ -15,7 +18,6 @@ namespace wave_tool {
 
         //NOTE: currently placing the light at the top of the y-axis
         lightPos = glm::vec3(0.0f, 500.0f, 0.0f);
-        projection = glm::perspective(glm::radians(72.0f), (float)width / height, 0.1f, 5000.0f); //NOTE: near distance must be small enough to not conflict with skybox size
 
         // Set OpenGL state
         glEnable(GL_DEPTH_TEST);
@@ -24,9 +26,14 @@ namespace wave_tool {
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     }
 
+    std::shared_ptr<Camera> RenderEngine::getCamera() const {
+        return m_camera;
+    }
+
     // Called to render provided objects under view matrix
     void RenderEngine::render(std::shared_ptr<const MeshObject> skybox, std::vector<std::shared_ptr<MeshObject>> const& objects) {
-        glm::mat4 const view = camera->getLookAt();
+        glm::mat4 const view = m_camera->getViewMat();
+        glm::mat4 const projection = m_camera->getProjectionMat();
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_BLEND);
@@ -312,7 +319,7 @@ namespace wave_tool {
 
     // Sets projection and viewport for new width and height
     void RenderEngine::setWindowSize(int width, int height) {
-        projection = glm::perspective(glm::radians(72.0f), (float)width / height, 0.1f, 5000.0f); //NOTE: near distance must be small enough to not conflict with skybox size
+        m_camera->setAspect((float)width / height);
         glViewport(0, 0, width, height);
     }
 }
