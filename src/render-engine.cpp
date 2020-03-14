@@ -11,9 +11,9 @@ namespace wave_tool {
         //NOTE: near distance must be small enough to not conflict with skybox size
         m_camera = std::make_shared<Camera>(72.0f, (float)width / height, 0.1f, 5000.0f, glm::vec3(0.0f, 1000.0f, 1000.0f));
 
-        skyboxProgram = ShaderTools::compileShaders("../assets/shaders/skybox.vert", "../assets/shaders/skybox.frag");
-        trivialProgram = ShaderTools::compileShaders("../assets/shaders/trivial.vert", "../assets/shaders/trivial.frag");
-        mainProgram = ShaderTools::compileShaders("../assets/shaders/main.vert", "../assets/shaders/main.frag");
+        skyboxProgram = ShaderTools::compileShaders("../../assets/shaders/skybox.vert", "../../assets/shaders/skybox.frag");
+        trivialProgram = ShaderTools::compileShaders("../../assets/shaders/trivial.vert", "../../assets/shaders/trivial.frag");
+        mainProgram = ShaderTools::compileShaders("../../assets/shaders/main.vert", "../../assets/shaders/main.frag");
         //lightProgram = ShaderTools::compileShaders("../assets/shaders/light.vert", "../assets/shaders/light.frag");
 
         //NOTE: currently placing the light at the top of the y-axis

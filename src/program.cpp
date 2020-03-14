@@ -224,22 +224,22 @@ namespace wave_tool {
 
         //TODO: save a bunch of skyboxes that can be toggled back and forth (along with sun position?)
         // hard-coded skybox...
-        m_skybox = ObjectLoader::createTriMeshObject("../assets/models/imports/cube.obj", true, true);
+        m_skybox = ObjectLoader::createTriMeshObject("../../assets/models/imports/cube.obj", true, true);
         if (nullptr != m_skybox) {
-            m_skybox->textureID = m_renderEngine->loadCubemap({"../assets/textures/skyboxes/sunny/TropicalSunnyDay_px.jpg",
-                                                               "../assets/textures/skyboxes/sunny/TropicalSunnyDay_nx.jpg",
-                                                               "../assets/textures/skyboxes/sunny/TropicalSunnyDay_py.jpg",
-                                                               "../assets/textures/skyboxes/sunny/TropicalSunnyDay_ny.jpg",
-                                                               "../assets/textures/skyboxes/sunny/TropicalSunnyDay_pz.jpg",
-                                                               "../assets/textures/skyboxes/sunny/TropicalSunnyDay_nz.jpg"});
+            m_skybox->textureID = m_renderEngine->loadCubemap({"../../assets/textures/skyboxes/sunny/TropicalSunnyDay_px.jpg",
+                                                               "../../assets/textures/skyboxes/sunny/TropicalSunnyDay_nx.jpg",
+                                                               "../../assets/textures/skyboxes/sunny/TropicalSunnyDay_py.jpg",
+                                                               "../../assets/textures/skyboxes/sunny/TropicalSunnyDay_ny.jpg",
+                                                               "../../assets/textures/skyboxes/sunny/TropicalSunnyDay_pz.jpg",
+                                                               "../../assets/textures/skyboxes/sunny/TropicalSunnyDay_nz.jpg"});
             // if there was an error
             // fallback#1 (use debug skybox) (if this fails too for some reason, then there won't be a skybox)
-            if (0 == m_skybox->textureID) m_skybox->textureID = m_renderEngine->loadCubemap({"../assets/textures/skyboxes/debug/_px.jpg",
-                                                                                             "../assets/textures/skyboxes/debug/_nx.jpg",
-                                                                                             "../assets/textures/skyboxes/debug/_py.jpg",
-                                                                                             "../assets/textures/skyboxes/debug/_ny.jpg",
-                                                                                             "../assets/textures/skyboxes/debug/_pz.jpg",
-                                                                                             "../assets/textures/skyboxes/debug/_nz.jpg"});
+            if (0 == m_skybox->textureID) m_skybox->textureID = m_renderEngine->loadCubemap({"../../assets/textures/skyboxes/debug/_px.jpg",
+                                                                                             "../../assets/textures/skyboxes/debug/_nx.jpg",
+                                                                                             "../../assets/textures/skyboxes/debug/_py.jpg",
+                                                                                             "../../assets/textures/skyboxes/debug/_ny.jpg",
+                                                                                             "../../assets/textures/skyboxes/debug/_pz.jpg",
+                                                                                             "../../assets/textures/skyboxes/debug/_nz.jpg"});
             // fallback#2 (no skybox, you will just see the clear colour)
             if (0 == m_skybox->textureID) m_skybox = nullptr;
         }
@@ -247,12 +247,12 @@ namespace wave_tool {
 
         //TODO: in the future, allow users to load in different terrains? (it would be nice to get program to work dynamically with whatever terrain it comes across) - probably not since finding terrain that works with my loader is hell
         // terrain...
-        m_terrain = ObjectLoader::createTriMeshObject("../assets/models/imports/everest.obj");
+        m_terrain = ObjectLoader::createTriMeshObject("../../assets/models/imports/everest.obj");
         if (nullptr != m_terrain) {
             if (m_terrain->hasTexture) {
-                m_terrain->textureID = m_renderEngine->load2DTexture("../assets/textures/everest.png");
+                m_terrain->textureID = m_renderEngine->load2DTexture("../../assets/textures/everest.png");
                 // if there was an error...
-                if (0 == m_terrain->textureID) m_terrain->textureID = m_renderEngine->load2DTexture("../assets/textures/default.png"); // fallback#1 (if this fails too for some reason, then the model will most likely be black or undefined colour)
+                if (0 == m_terrain->textureID) m_terrain->textureID = m_renderEngine->load2DTexture("../../assets/textures/default.png"); // fallback#1 (if this fails too for some reason, then the model will most likely be black or undefined colour)
             }
             //m_terrain->generateNormals();
             m_terrain->setScale(glm::vec3(1000.0f, 1000.0f, 1000.0f));
