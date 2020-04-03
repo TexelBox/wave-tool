@@ -88,15 +88,15 @@ namespace wave_tool {
         ImGui::Separator();
 
         if (nullptr != m_yzPlane) {
-            if (ImGui::Button("TOGGLE YZ-PLANE (RED)")) m_yzPlane->m_isVisible = !m_yzPlane->m_isVisible;
+            if (ImGui::Button("TOGGLE YZ-PLANE / +X-AXIS (RED)")) m_yzPlane->m_isVisible = !m_yzPlane->m_isVisible;
             ImGui::SameLine();
         }
         if (nullptr != m_xzPlane) {
-            if (ImGui::Button("TOGGLE XZ-PLANE (GREEN)")) m_xzPlane->m_isVisible = !m_xzPlane->m_isVisible;
+            if (ImGui::Button("TOGGLE XZ-PLANE / +Y-AXIS (GREEN)")) m_xzPlane->m_isVisible = !m_xzPlane->m_isVisible;
             ImGui::SameLine();
         }
         if (nullptr != m_xyPlane) {
-            if (ImGui::Button("TOGGLE XY-PLANE (BLUE)")) m_xyPlane->m_isVisible = !m_xyPlane->m_isVisible;
+            if (ImGui::Button("TOGGLE XY-PLANE / +Z-AXIS (BLUE)")) m_xyPlane->m_isVisible = !m_xyPlane->m_isVisible;
             ImGui::SameLine();
         }
         if (nullptr != m_yzPlane || nullptr != m_xzPlane || nullptr != m_xyPlane) {
@@ -142,8 +142,7 @@ namespace wave_tool {
         int const deltaY = 10;
         int const deltaZ = 10;
 
-        // YZ PLANE
-
+        // YZ-PLANE / +X-AXIS (RED)...
         m_yzPlane = std::make_shared<MeshObject>();
 
         for (int y = -maxY; y <= maxY; y += deltaY) {
@@ -154,6 +153,8 @@ namespace wave_tool {
             m_yzPlane->drawVerts.push_back(glm::vec3(0.0f, -maxY, z));
             m_yzPlane->drawVerts.push_back(glm::vec3(0.0f, maxY, z));
         }
+        m_yzPlane->drawVerts.push_back(glm::vec3{0.0f, 0.0f, 0.0f});
+        m_yzPlane->drawVerts.push_back(glm::vec3{2.0f * maxX, 0.0f, 0.0f});
 
         for (unsigned int i = 0; i < m_yzPlane->drawVerts.size(); ++i) {
             m_yzPlane->drawFaces.push_back(i);
@@ -164,7 +165,7 @@ namespace wave_tool {
         m_meshObjects.push_back(m_yzPlane);
         m_renderEngine->assignBuffers(*m_yzPlane);
 
-        // XZ PLANE
+        // XZ-PLANE / +Y-AXIS (GREEN)...
 
         m_xzPlane = std::make_shared<MeshObject>();
 
@@ -176,6 +177,8 @@ namespace wave_tool {
             m_xzPlane->drawVerts.push_back(glm::vec3(-maxX, 0.0f, z));
             m_xzPlane->drawVerts.push_back(glm::vec3(maxX, 0.0f, z));
         }
+        m_xzPlane->drawVerts.push_back(glm::vec3{0.0f, 0.0f, 0.0f});
+        m_xzPlane->drawVerts.push_back(glm::vec3{0.0f, 2.0f * maxY, 0.0f});
 
         for (unsigned int i = 0; i < m_xzPlane->drawVerts.size(); ++i) {
             m_xzPlane->drawFaces.push_back(i);
@@ -186,7 +189,7 @@ namespace wave_tool {
         m_meshObjects.push_back(m_xzPlane);
         m_renderEngine->assignBuffers(*m_xzPlane);
 
-        // XY PLANE
+        // XY-PLANE / +Z-AXIS (BLUE)
 
         m_xyPlane = std::make_shared<MeshObject>();
 
@@ -198,6 +201,8 @@ namespace wave_tool {
             m_xyPlane->drawVerts.push_back(glm::vec3(-maxX, y, 0.0f));
             m_xyPlane->drawVerts.push_back(glm::vec3(maxX, y, 0.0f));
         }
+        m_xyPlane->drawVerts.push_back(glm::vec3{0.0f, 0.0f, 0.0f});
+        m_xyPlane->drawVerts.push_back(glm::vec3{0.0f, 0.0f, 2.0f * maxZ});
 
         for (unsigned int i = 0; i < m_xyPlane->drawVerts.size(); ++i) {
             m_xyPlane->drawFaces.push_back(i);
