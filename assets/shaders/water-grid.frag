@@ -14,8 +14,7 @@ void main() {
     // both input vectors should be normalized to ensure output vector is normalized
     //NOTE: the incident vector must point towards the surface (thus, we negate the view vector that is defined as pointing away)
     vec3 R = reflect(-viewVec, normal);
-    //NOTE: since we flip the x-component of our skybox to render it inside-out, we must also do the same here when we sample it 
-    vec4 skybox_reflection_colour = vec4(texture(skybox, vec3(-R.x, R.yz)).rgb, 1.0f);
+    vec4 skybox_reflection_colour = vec4(texture(skybox, R).rgb, 1.0f);
 
     // fresnel reflectance (schlick approximation...)
     // reference: https://en.wikipedia.org/wiki/Schlick%27s_approximation

@@ -232,6 +232,7 @@ namespace wave_tool {
         */
 
         //TODO: save a bunch of skyboxes that can be toggled back and forth (along with sun position?)
+        //TODO: is it possible to mirror the skybox textures on loading them in (since we are inside the cube), but keeping the proper orientation???
         // hard-coded skybox...
         m_skybox = ObjectLoader::createTriMeshObject("../../assets/models/imports/cube.obj", true, true);
         if (nullptr != m_skybox) {
