@@ -162,6 +162,7 @@ namespace wave_tool {
         }
 
         m_yzPlane->m_primitiveMode = PrimitiveMode::LINES;
+        m_yzPlane->m_isVisible = false;
         m_meshObjects.push_back(m_yzPlane);
         m_renderEngine->assignBuffers(*m_yzPlane);
 
@@ -186,6 +187,7 @@ namespace wave_tool {
         }
 
         m_xzPlane->m_primitiveMode = PrimitiveMode::LINES;
+        m_xzPlane->m_isVisible = false;
         m_meshObjects.push_back(m_xzPlane);
         m_renderEngine->assignBuffers(*m_xzPlane);
 
@@ -210,6 +212,7 @@ namespace wave_tool {
         }
 
         m_xyPlane->m_primitiveMode = PrimitiveMode::LINES;
+        m_xyPlane->m_isVisible = false;
         m_meshObjects.push_back(m_xyPlane);
         m_renderEngine->assignBuffers(*m_xyPlane);
 
