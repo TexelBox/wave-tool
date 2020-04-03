@@ -1,5 +1,8 @@
 #include "render-engine.h"
 
+#include <array>
+#include <vector>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
@@ -15,6 +18,7 @@ namespace wave_tool {
         trivialProgram = ShaderTools::compileShaders("../../assets/shaders/trivial.vert", "../../assets/shaders/trivial.frag");
         mainProgram = ShaderTools::compileShaders("../../assets/shaders/main.vert", "../../assets/shaders/main.frag");
         //lightProgram = ShaderTools::compileShaders("../assets/shaders/light.vert", "../assets/shaders/light.frag");
+        waterGridProgram = ShaderTools::compileShaders("../../assets/shaders/water-grid.vert", "../../assets/shaders/water-grid.frag");
 
         //NOTE: currently placing the light at the top of the y-axis
         lightPos = glm::vec3(0.0f, 500.0f, 0.0f);
@@ -31,9 +35,11 @@ namespace wave_tool {
     }
 
     // Called to render provided objects under view matrix
-    void RenderEngine::render(std::shared_ptr<const MeshObject> skybox, std::vector<std::shared_ptr<MeshObject>> const& objects) {
+    void RenderEngine::render(std::shared_ptr<const MeshObject> skybox, std::shared_ptr<const MeshObject> waterGrid, std::vector<std::shared_ptr<MeshObject>> const& objects) {
         glm::mat4 const view = m_camera->getViewMat();
         glm::mat4 const projection = m_camera->getProjectionMat();
+        glm::mat4 const viewProjection = projection * view;
+        glm::mat4 const inverseViewProjection = glm::inverse(viewProjection);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_BLEND);
@@ -68,6 +74,7 @@ namespace wave_tool {
             glDepthMask(GL_TRUE);
         }
 
+        // render other objects...
         glUseProgram(mainProgram);
         for (std::shared_ptr<MeshObject const> o : objects) {
             // don't render invisible objects...
@@ -96,6 +103,223 @@ namespace wave_tool {
             glBindVertexArray(0);
             Texture::unbind2DTexture();
         }
+
+        //TODO: setup clipping and rendering for local reflections/refractions
+
+        //NOTE: the order of drawing matters for alpha-blending
+        // render water...
+        if (nullptr != waterGrid && waterGrid->m_isVisible && nullptr != skybox) {
+
+            // reference: https://fileadmin.cs.lth.se/graphics/theses/projects/projgrid/
+            //NOTE: this code closely follows the algorithm laid out by the demo at the above reference
+
+            //TODO: have a UI slider for this
+            float const WAVE_AMPLITUDE = 5.0f;
+            geometry::Plane const upperPlane{0.0f, 1.0f, 0.0f, WAVE_AMPLITUDE};
+            geometry::Plane const basePlane{0.0f, 1.0f, 0.0f, 0.0f};
+            geometry::Plane const lowerPlane{0.0f, 1.0f, 0.0f, -WAVE_AMPLITUDE};
+
+            // reference: https://gamedev.stackexchange.com/questions/29999/how-do-i-create-a-bounding-frustum-from-a-view-projection-matrix
+            // reference: https://stackoverflow.com/questions/7692988/opengl-math-projecting-screen-space-to-world-space-coords
+            // reference: https://www.gamedev.net/forums/topic/644571-calculating-frustum-corners-from-a-projection-matrix/
+            // initialize in NDC-space
+            std::array<glm::vec4, 8> frustumCornerPoints{glm::vec4{-1.0f, -1.0f, -1.0f, 1.0f},  // [0] - (lbn) - left / bottom / near
+                                                         glm::vec4{-1.0f, -1.0f, 1.0f, 1.0f},   // [1] - (lbf) - left / bottom / far
+                                                         glm::vec4{-1.0f, 1.0f, -1.0f, 1.0f},   // [2] - (ltn) - left / top / near
+                                                         glm::vec4{-1.0f, 1.0f, 1.0f, 1.0f},    // [3] - (ltf) - left / top / far
+                                                         glm::vec4{1.0f, -1.0f, -1.0f, 1.0f},   // [4] - (rbn) - right / bottom / near
+                                                         glm::vec4{1.0f, -1.0f, 1.0f, 1.0f},    // [5] - (rbf) - right / bottom / far
+                                                         glm::vec4{1.0f, 1.0f, -1.0f, 1.0f},    // [6] - (rtn) - right / top / near
+                                                         glm::vec4{1.0f, 1.0f, 1.0f, 1.0f}};    // [7] - (rtf) - right / top / far
+
+            // transform into world-space...
+            for (unsigned int i = 0; i < frustumCornerPoints.size(); ++i) {
+                glm::vec4 const temp{inverseViewProjection * frustumCornerPoints.at(i)};
+                frustumCornerPoints.at(i) = temp / temp.w;
+            }
+
+            // stores indices into frustumCornerPoints
+            // 12 edges between pairs of points 
+            std::array<unsigned int, 24> const FRUSTUM_EDGES{0,1,   // [0]  - lbn ---> lbf (across-edge)
+                                                             0,2,   // [1]  - lbn ---> ltn (near-edge)
+                                                             0,4,   // [2]  - lbn ---> rbn (near-edge) 
+                                                             1,3,   // [3]  - lbf ---> ltf (far-edge)
+                                                             1,5,   // [4]  - lbf ---> rbf (far-edge)
+                                                             2,3,   // [5]  - ltn ---> ltf (across-edge) 
+                                                             2,6,   // [6]  - ltn ---> rtn (near-edge)
+                                                             3,7,   // [7]  - ltf ---> rtf (far-edge)
+                                                             4,5,   // [8]  - rbn ---> rbf (across-edge)
+                                                             4,6,   // [9]  - rbn ---> rtn (near-edge)
+                                                             5,7,   // [10] - rbf ---> rtf (far-edge)
+                                                             6,7};  // [11] - rtn ---> rtf (across-edge)
+
+            // stores intersection points of camera frustum with the displaceable volume (between upper and lower bounding planes)
+            std::vector<glm::vec4> intersectionPoints;
+
+            // intersection testing with upper/lower bound planes...
+            // for each frustum edge...
+            for (unsigned int i = 0; i < 12; ++i) {
+                unsigned int const src{FRUSTUM_EDGES.at(i * 2)};
+                unsigned int const dest{FRUSTUM_EDGES.at(i * 2 + 1)};
+
+                geometry::Line const line{frustumCornerPoints.at(src), frustumCornerPoints.at(dest)};
+
+                // upper-bound plane
+                // first, we do a quick intersection check (plane in this case can be described by all points with y = d, since the normal is <0,1,0>)
+                if (glm::min(line.p0.y, line.p1.y) <= upperPlane.d && upperPlane.d <= glm::max(line.p0.y, line.p1.y)) {
+                    glm::vec3 intersectionPoint;
+                    bool const isIntersection{utils::linePlaneIntersection(intersectionPoint, line, upperPlane)};
+                    //NOTE: we can't currently assert this is true, since there is the rare chance that the line lies in the plane (which is currently treated as no intersection for simplicity)
+                    if (isIntersection) intersectionPoints.push_back(glm::vec4{intersectionPoint, 1.0f});
+                }
+
+                // lower-bound plane
+                // first, we do a quick intersection check (plane in this case can be described by all points with y = d, since the normal is <0,1,0>)
+                if (glm::min(line.p0.y, line.p1.y) <= lowerPlane.d && lowerPlane.d <= glm::max(line.p0.y, line.p1.y)) {
+                    glm::vec3 intersectionPoint;
+                    bool const isIntersection{utils::linePlaneIntersection(intersectionPoint, line, lowerPlane)};
+                    //NOTE: we can't currently assert this is true, since there is the rare chance that the line lies in the plane (which is currently treated as no intersection for simplicity)
+                    if (isIntersection) intersectionPoints.push_back(glm::vec4{intersectionPoint, 1.0f});
+                }
+            }
+
+            // include any frustum vertices that lie within (intersect) the displaceable volume (between upper and lower bounding planes)
+            // for each frustum vertex...
+            for (unsigned int i = 0; i < frustumCornerPoints.size(); ++i) {
+                glm::vec4 const& frustumCornerPoint{frustumCornerPoints.at(i)};
+                // we do a quick intersection check (planes in this case can be described by all points with y = d, since both have normals as <0, 1, 0>)
+                if (lowerPlane.d <= frustumCornerPoint.y && frustumCornerPoint.y <= upperPlane.d) intersectionPoints.push_back(frustumCornerPoint);
+            }
+
+            // only continue to render the water grid, if there were intersection points
+            if (!intersectionPoints.empty()) {
+                // create projector...
+                // keeping it simple for now...
+                //TODO: improve the projected grid with the projector properly setup
+                Camera const& projector = *m_camera;
+
+                // project all intersection points onto base plane...
+                for (unsigned int i = 0; i < intersectionPoints.size(); ++i) {
+                    intersectionPoints.at(i).y = 0.0f;
+                }
+
+                // transform all intersection points into NDC-space (for projector)
+                // reference: https://community.khronos.org/t/homogenous-normalized-device-coords-and-clipping/61965
+                // reference: https://stackoverflow.com/questions/21841598/when-does-the-transition-from-clip-space-to-screen-coordinates-happen
+                //NOTE: I was having a lot of issues before I divided by w, so hopefully everything works now
+                glm::mat4 const projector_viewProjectionMat{ projector.getProjectionMat() * projector.getViewMat() };
+                for (unsigned int i = 0; i < intersectionPoints.size(); ++i) {
+                    glm::vec4 const temp{projector_viewProjectionMat * intersectionPoints.at(i)}; // now in clip-space
+                    intersectionPoints.at(i) = temp / temp.w; // now in NDC-space
+                }
+
+                // determine the xy-NDC bounds of the intersection points
+                float x_min = intersectionPoints.at(0).x;
+                float x_max = intersectionPoints.at(0).x;
+                float y_min = intersectionPoints.at(0).y;
+                float y_max = intersectionPoints.at(0).y;
+                for (unsigned int i = 1; i < intersectionPoints.size(); ++i) {
+                    if (intersectionPoints.at(i).x < x_min) x_min = intersectionPoints.at(i).x;
+                    else if (intersectionPoints.at(i).x > x_max) x_max = intersectionPoints.at(i).x;
+
+                    if (intersectionPoints.at(i).y < y_min) y_min = intersectionPoints.at(i).y;
+                    else if (intersectionPoints.at(i).y > y_max) y_max = intersectionPoints.at(i).y;
+                }
+
+                // setup the range conversion matrix (in column-major order)
+                // will be used to convert from a special uv-space ("range-space")
+                //
+                // |x_max - x_min,       0      , 0, x_min|
+                // |      0      , y_max - y_min, 0, y_min|
+                // |      0      ,       0      , 1,   0  |
+                // |      0      ,       0      , 0,   1  |
+                //
+                glm::mat4 const rangeMat{x_max - x_min, 0.0f, 0.0f, 0.0f,
+                                         0.0f, y_max - y_min, 0.0f, 0.0f,
+                                         0.0f, 0.0f, 1.0f, 0.0f,
+                                         x_min, y_min, 0.0f, 1.0f};
+
+                // compute M_projector...
+                glm::mat4 const projectorMat{glm::inverse(projection * projector.getViewMat()) * rangeMat};
+
+                // compute the world-space coordinates of the four grid corners...
+                // init the corner positions in a special uv-space ("range-space") - (with z = -1 (near) for convenience for intersection test below)
+                std::array<glm::vec4, 4> waterGridCornerPoints{glm::vec4{0.0f, 0.0f, -1.0f, 1.0f},   // [0] - bottom-left
+                                                               glm::vec4{0.0f, 1.0f, -1.0f, 1.0f},   // [1] - top-left
+                                                               glm::vec4{1.0f, 0.0f, -1.0f, 1.0f},   // [2] - bottom-right
+                                                               glm::vec4{1.0f, 1.0f, -1.0f, 1.0f}};  // [3] - top-right
+
+                // transform the coordinates to world-space...
+                // intersect projected rays with XZ-plane (base plane) to get world-space bounds of grid...
+                for (unsigned int i = 0; i < waterGridCornerPoints.size(); ++i) {
+                    glm::vec4 p0{waterGridCornerPoints.at(i)};
+                    glm::vec4 p1{p0};
+                    p1.z = 1.0f; // far
+
+                    // transform both points to world-space...
+                    p0 = projectorMat * p0;
+                    p0 /= p0.w;
+                    p1 = projectorMat * p1;
+                    p1 /= p1.w;
+
+                    // intersection test...
+                    geometry::Line const line{p0, p1};
+                    glm::vec3 intersectionPoint;
+                    bool const isIntersection{utils::linePlaneIntersection(intersectionPoint, line, basePlane)};
+                    assert(isIntersection);
+                    waterGridCornerPoints.at(i) = glm::vec4{intersectionPoint, 1.0f};
+                }
+
+                // set useful aliases for the grid corners
+                glm::vec4 const& bottomLeftGridPointInWorld{waterGridCornerPoints.at(0)};
+                glm::vec4 const& topLeftGridPointInWorld{waterGridCornerPoints.at(1)};
+                glm::vec4 const& bottomRightGridPointInWorld{waterGridCornerPoints.at(2)};
+                glm::vec4 const& topRightGridPointInWorld{waterGridCornerPoints.at(3)};
+
+                // now render...
+                glUseProgram(waterGridProgram);
+                glBindVertexArray(waterGrid->vao);
+
+                // set uniforms...
+                //TODO: should get uniform locations ONCE and store them (and error handle)
+
+                //TODO: right now this just matches a constant in program.cpp, but will be attached to MeshObject in the future
+                //TODO: make this a UI setting (and probably should store this with the mesh itself since drawFaces will be closely related)
+                //TODO: might even split this into a width/height (or hres/vres) in the future for non-square grids
+                //NOTE: this should be >= 2
+                GLuint const GRID_LENGTH = 65;
+
+                glUniform4fv(glGetUniformLocation(waterGridProgram, "bottomLeftGridPointInWorld"), 1, glm::value_ptr(bottomLeftGridPointInWorld));
+                glUniform4fv(glGetUniformLocation(waterGridProgram, "bottomRightGridPointInWorld"), 1, glm::value_ptr(bottomRightGridPointInWorld));
+                glUniform3fv(glGetUniformLocation(waterGridProgram, "cameraPosition"), 1, glm::value_ptr(m_camera->getPosition()));
+                glUniform1ui(glGetUniformLocation(waterGridProgram, "gridLength"), GRID_LENGTH);
+                Texture::bind2DTexture(waterGridProgram, waterGrid->textureID, "heightmap");
+
+                // bind texture...
+                glActiveTexture(GL_TEXTURE0 + skybox->textureID);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, skybox->textureID);
+                // set skybox samplerCube uniform in shader program
+                glUniform1i(glGetUniformLocation(waterGridProgram, "skybox"), skybox->textureID);
+
+                glUniform4fv(glGetUniformLocation(waterGridProgram, "topLeftGridPointInWorld"), 1, glm::value_ptr(topLeftGridPointInWorld));
+                glUniform4fv(glGetUniformLocation(waterGridProgram, "topRightGridPointInWorld"), 1, glm::value_ptr(topRightGridPointInWorld));
+                glUniformMatrix4fv(glGetUniformLocation(waterGridProgram, "viewProjection"), 1, GL_FALSE, glm::value_ptr(viewProjection));
+                glUniform1f(glGetUniformLocation(waterGridProgram, "waveAmplitude"), WAVE_AMPLITUDE);
+
+                // draw...
+                // POINT, LINE or FILL...
+                glPolygonMode(GL_FRONT_AND_BACK, waterGrid->m_polygonMode);
+                glDrawElements(waterGrid->m_primitiveMode, waterGrid->drawFaces.size(), GL_UNSIGNED_INT, (void*)0);
+
+                // unbind texture...
+                glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+                Texture::unbind2DTexture();
+                glBindVertexArray(0); // unbind VAO
+                glUseProgram(0); // unbind shader program
+            }
+        }
+
         //renderLight();
     }
 
@@ -114,27 +338,26 @@ namespace wave_tool {
     }
 */
 
-    // Assigns and binds buffers for a Mesh Object - vertices, normals, UV coordinates, faces
     void RenderEngine::assignBuffers(MeshObject &object)
     {
-        std::vector<glm::vec3> &vertices = object.drawVerts;
-        std::vector<glm::vec3> &normals = object.normals;
-        std::vector<glm::vec2> &uvs = object.uvs;
-        std::vector<glm::vec3> &colours = object.colours;
-        std::vector<GLuint> &faces = object.drawFaces;
+        std::vector<glm::vec3> const& vertices = object.drawVerts;
+        std::vector<glm::vec3> const& normals = object.normals;
+        std::vector<glm::vec2> const& uvs = object.uvs;
+        std::vector<glm::vec3> const& colours = object.colours;
+        std::vector<GLuint> const& faces = object.drawFaces;
 
-        // Bind attribute array for triangles
         glGenVertexArrays(1, &object.vao);
         glBindVertexArray(object.vao);
 
         // Vertex buffer
-        //NOTE: every object should have verts
         // location 0 in vao
-        glGenBuffers(1, &object.vertexBuffer);
-        glBindBuffer(GL_ARRAY_BUFFER, object.vertexBuffer);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-        glEnableVertexAttribArray(0);
+        if (vertices.size() > 0) {
+            glGenBuffers(1, &object.vertexBuffer);
+            glBindBuffer(GL_ARRAY_BUFFER, object.vertexBuffer);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+            glEnableVertexAttribArray(0);
+        }
 
         // Normal buffer
         // location 1 in vao
@@ -167,11 +390,13 @@ namespace wave_tool {
         }
 
         // Face buffer
-        //NOTE: assuming every object is using an index buffer (thus glDrawElements is always used)
-        // this is fully compatible since if an object has only verts and wanted to use glDrawArrays, then it could just initialize a trivial index buffer (0,1,2,...,verts.size()-1)
-        glGenBuffers(1, &object.indexBuffer);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, object.indexBuffer);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*faces.size(), faces.data(), GL_STATIC_DRAW);
+        if (faces.size() > 0) {
+            //NOTE: assuming every object with faces is using an index buffer (thus glDrawElements is always used)
+            // this is fully compatible since if an object has only verts and wanted to use glDrawArrays, then it could just initialize a trivial index buffer (0,1,2,...,verts.size()-1)
+            glGenBuffers(1, &object.indexBuffer);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, object.indexBuffer);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*faces.size(), faces.data(), GL_STATIC_DRAW);
+        }
 
         // unbind vao
         glBindVertexArray(0);

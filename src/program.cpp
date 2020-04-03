@@ -8,6 +8,7 @@
 
 #include "program.h"
 
+#include <array>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -59,7 +60,7 @@ namespace wave_tool {
             // rendering...
             ImGui::Render();
             //image.Render();
-            m_renderEngine->render(m_skybox, m_meshObjects);
+            m_renderEngine->render(m_skybox, m_waterGrid, m_meshObjects);
 
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -244,6 +245,51 @@ namespace wave_tool {
             if (0 == m_skybox->textureID) m_skybox = nullptr;
         }
         m_renderEngine->assignBuffers(*m_skybox);
+
+        m_waterGrid = std::make_shared<MeshObject>();
+        //m_waterGrid->m_polygonMode = PolygonMode::POINT; //NOTE: doing this atm makes a cool pixel art world
+        //m_waterGrid->m_polygonMode = PolygonMode::LINE;
+        //TEMP: hacking some indices together to draw grid as tri-mesh (should move this to MeshObject in the future)...
+        //TODO: explain this better in the future (with diagrams)
+
+        // first, store indices into a length * length square grid
+        //NOTE: atm, this must match the constant of the same name in render-engine.cpp, but will be changed in the future
+        GLuint const GRID_LENGTH = 65;
+        std::array<std::array<GLuint, GRID_LENGTH>, GRID_LENGTH> gridIndices;
+        // zero-fill
+        //NOTE: may not need this
+        gridIndices.fill({});
+        // now fill with the proper indices in the same layout that shader expects
+        // not that it really matters, but visualize it as [row][col] = [0][0] as the bottom-left element of 2D array
+        GLuint counterIndex = 0;
+        for (GLuint row = 0; row < GRID_LENGTH; ++row) {
+            for (GLuint col = 0; col < GRID_LENGTH; ++col) {
+                gridIndices.at(row).at(col) = counterIndex;
+                ++counterIndex;
+            }
+        }
+
+        // now using the vertex indices in this format, we can easily tesselate this grid into triangles as so...
+        //TODO: draw a diagram comment here to better explain this
+        for (GLuint row = 0; row < GRID_LENGTH - 1; ++row) {
+            for (GLuint col = 0; col < GRID_LENGTH - 1; ++col) {
+                // make 2 triangles (thus a square) from each of these indices acting as the bottom-left corner
+                // ensures that the winding of all triangles is counter-clockwise
+
+                m_waterGrid->drawFaces.push_back(gridIndices.at(row).at(col));
+                m_waterGrid->drawFaces.push_back(gridIndices.at(row + 1).at(col + 1));
+                m_waterGrid->drawFaces.push_back(gridIndices.at(row + 1).at(col));
+
+                m_waterGrid->drawFaces.push_back(gridIndices.at(row).at(col));
+                m_waterGrid->drawFaces.push_back(gridIndices.at(row).at(col + 1));
+                m_waterGrid->drawFaces.push_back(gridIndices.at(row + 1).at(col + 1));
+            }
+        }
+
+        m_waterGrid->textureID = m_renderEngine->load2DTexture("../../assets/textures/noise/waves/waves3/00.png"); //WARNING: THIS MAY HAVE TO BE CHANGED TO LOAD IN SPECIFICALLY WITH 8-bits (or may work, but should be optimized)
+        // fallback (water won't be renderable)
+        if (0 == m_waterGrid->textureID) m_waterGrid = nullptr;
+        if (nullptr != m_waterGrid) m_renderEngine->assignBuffers(*m_waterGrid);
 
         //TODO: in the future, allow users to load in different terrains? (it would be nice to get program to work dynamically with whatever terrain it comes across) - probably not since finding terrain that works with my loader is hell
         // terrain...

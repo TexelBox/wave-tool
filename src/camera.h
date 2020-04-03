@@ -16,8 +16,19 @@ namespace wave_tool {
             static float const DEFAULT_YAW;
 
             Camera(float const fov, float const aspect, float const nearClipDistance, float const farClipDistance, glm::vec3 const& position = DEFAULT_POSITION, glm::vec3 const& forward = DEFAULT_FORWARD, glm::vec3 const& up = DEFAULT_UP, float const yaw = DEFAULT_YAW, float const pitch = DEFAULT_PITCH);
+
+            float getAspect() const;
+            float getFarClipDistance() const;
+            glm::vec3 getForward() const;
+            float getFOV() const;
+            float getNearClipDistance() const;
+            float getPitch() const;
+            glm::vec3 getPosition() const;
             glm::mat4 getProjectionMat() const;
+            glm::vec3 getRight() const;
+            glm::vec3 getUp() const;
             glm::mat4 getViewMat() const;
+            float getYaw() const;
             void rotate(float const deltaYawDegrees, float const deltaPitchDegrees);
             void setAspect(float const aspect);
             void translate(glm::vec3 const& deltaPosition);

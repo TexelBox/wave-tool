@@ -22,13 +22,29 @@ namespace wave_tool {
         updateProjectionMat();
     }
 
-    glm::mat4 Camera::getProjectionMat() const {
-        return m_projectionMat;
-    }
+    float Camera::getAspect() const { return m_aspect; }
 
-    glm::mat4 Camera::getViewMat() const {
-        return m_viewMat;
-    }
+    float Camera::getFarClipDistance() const { return m_farClipDistance; }
+
+    glm::vec3 Camera::getForward() const { return m_forward; }
+
+    float Camera::getFOV() const { return m_fov; }
+
+    float Camera::getNearClipDistance() const { return m_nearClipDistance; }
+
+    float Camera::getPitch() const { return m_pitch; }
+
+    glm::vec3 Camera::getPosition() const { return m_position; }
+
+    glm::mat4 Camera::getProjectionMat() const { return m_projectionMat; }
+
+    glm::vec3 Camera::getRight() const { return m_right; }
+
+    glm::vec3 Camera::getUp() const { return m_up; }
+
+    glm::mat4 Camera::getViewMat() const { return m_viewMat; }
+
+    float Camera::getYaw() const { return m_yaw; }
 
     void Camera::rotate(float const deltaYawDegrees, float const deltaPitchDegrees) {
         m_yaw = glm::mod(m_yaw + deltaYawDegrees, 360.0f);
