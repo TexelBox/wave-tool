@@ -102,7 +102,7 @@ Many thanks to the contributors of the following projects! Please check them out
 - with clarification using the demo code downloaded from here <a href="https://fileadmin.cs.lth.se/graphics/theses/projects/projgrid/" target="_blank">Tech Demo</a>.
 - uses some skybox textures from <a href="https://github.com/BabylonJS/Babylon.js/tree/master/Playground/textures" target="_blank">Babylon.js</a>.
 - wave noise heightmap textures sourced from <a href="https://opengameart.org/content/seamless-looping-waves-heightmaps" target="_blank">opengameart.org - Seamless Looping Waves Heightmaps</a>.
-- TODO: add reference to Mount Everest model source.
+- Mount Everest model sourced from <a href="https://free3d.com/3d-model/everest-mountain-930871.html" target="_blank">free3d.com - Everest Mountain</a>.
 
 ---
 
