@@ -23,7 +23,7 @@ void main() {
     // ---> f_0 = ((n_1 - n_2) / (n_1 + n_2))^2 = 0.02 (almost perfectly transmissive at this angle)  
     float fresnel_f_0 = 0.02f;
     // both input vectors should be normalized
-    //TODO: do I need to handle a negative value here???
+    //NOTE: since the vertex shader flips the normal when the camera is underwater, this dot product will be in range [0.0, 1.0]
     float fresnel_cos_theta = dot(normal, viewVec);
     float fresnel_f_theta = fresnel_f_0 + (1.0f - fresnel_f_0) * pow(1.0f - fresnel_cos_theta, 5);
 
@@ -34,6 +34,7 @@ void main() {
     // output final fragment colour...
     // reference: https://fileadmin.cs.lth.se/graphics/theses/projects/projgrid/projgrid-hq.pdf
     //TODO: expand this later to combine other visual effects
+    //TODO: currently there are visual artifacts when the camera is within the displaceable volume, but its minor and rarely noticeable
     colour = (1.0f - fresnel_f_theta) * water_tint_colour + fresnel_f_theta * skybox_reflection_colour;
 
     //TODO: have a UI toggle for this debug colour...
