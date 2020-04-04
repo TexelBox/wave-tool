@@ -31,6 +31,7 @@ namespace wave_tool {
             float getYaw() const;
             void rotate(float const deltaYawDegrees, float const deltaPitchDegrees);
             void setAspect(float const aspect);
+            void setRotation(float const yawDegrees, float const pitchDegrees);
             void translate(glm::vec3 const& deltaPosition);
             void translateForward(float const delta);
             void translateRight(float const delta);

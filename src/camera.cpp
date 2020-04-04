@@ -59,6 +59,13 @@ namespace wave_tool {
         updateProjectionMat();
     }
 
+    void Camera::setRotation(float const yawDegrees, float const pitchDegrees) {
+        m_yaw = glm::mod(yawDegrees, 360.0f);
+        m_pitch = glm::clamp(pitchDegrees, -89.0f, 89.0f);
+
+        updateBasisVectors();
+    }
+
     void Camera::translate(glm::vec3 const& deltaPosition) {
         m_position += deltaPosition;
 

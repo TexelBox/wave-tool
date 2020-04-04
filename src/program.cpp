@@ -263,7 +263,8 @@ namespace wave_tool {
 
         // first, store indices into a length * length square grid
         //NOTE: atm, this must match the constant of the same name in render-engine.cpp, but will be changed in the future
-        GLuint const GRID_LENGTH = 65;
+        //GLuint const GRID_LENGTH = 65;
+        GLuint const GRID_LENGTH = 257;
         std::array<std::array<GLuint, GRID_LENGTH>, GRID_LENGTH> gridIndices;
         // zero-fill
         //NOTE: may not need this

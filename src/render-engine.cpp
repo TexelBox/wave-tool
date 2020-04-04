@@ -115,6 +115,7 @@ namespace wave_tool {
 
             //TODO: have a UI slider for this
             float const WAVE_AMPLITUDE = 5.0f;
+            //float const WAVE_AMPLITUDE = 0.0f;
             geometry::Plane const upperPlane{0.0f, 1.0f, 0.0f, WAVE_AMPLITUDE};
             geometry::Plane const basePlane{0.0f, 1.0f, 0.0f, 0.0f};
             geometry::Plane const lowerPlane{0.0f, 1.0f, 0.0f, -WAVE_AMPLITUDE};
@@ -193,10 +194,76 @@ namespace wave_tool {
 
             // only continue to render the water grid, if there were intersection points
             if (!intersectionPoints.empty()) {
+                ///////////////////////////////////////////////////////////////////////////////////
                 // create projector...
-                // keeping it simple for now...
-                //TODO: improve the projected grid with the projector properly setup
-                Camera const& projector = *m_camera;
+                // rules...
+                //  1. should never aim away from base plane
+                //  2. eye position must be outside visible volume (thus eye.y <= lowerPlane.d OR eye.y >= upperPlane.d)
+                //  3. provide the most "pleasant" possible projector transformation
+                //NOTE: due to how the triangle mesh is tessellated, the winding will always be counter-clockwise, regardless of whether the projector is above or below the base plane
+                //NOTE: the projector will only differ from the camera in its position.y and pitch, thus we can just clone the camera and then apply a translation + set pitch
+                //NOTE: there are two aimpoints that get interpolated between based on the camera's forward vector - two extreme cases (1. abs(cameraForward • <0,1,0>) == 1 (bird's eye) and 2. cameraForward • <0,1,0> == 0 (horizon)
+
+                Camera projector{*m_camera};
+
+                float const cameraDistanceFromBasePlane{m_camera->getPosition().y};
+                bool const isUnderwater{cameraDistanceFromBasePlane < 0.0f};
+                //TODO: make this a UI property
+                float const PROJECTOR_ELEVATION_FROM_CAMERA = 7.0f;
+                float const MINIMUM_PROJECTOR_DISTANCE_FROM_BASE_PLANE{WAVE_AMPLITUDE + PROJECTOR_ELEVATION_FROM_CAMERA};
+
+                // translate the y-position of the projector, so that it lies outside the displaceable volume (with some extra elevation padding)
+                if (cameraDistanceFromBasePlane < MINIMUM_PROJECTOR_DISTANCE_FROM_BASE_PLANE) {
+                    if (isUnderwater) projector.translate(glm::vec3{0.0f, MINIMUM_PROJECTOR_DISTANCE_FROM_BASE_PLANE - 2.0f * cameraDistanceFromBasePlane, 0.0f});
+                    else projector.translate(glm::vec3{0.0f, MINIMUM_PROJECTOR_DISTANCE_FROM_BASE_PLANE - cameraDistanceFromBasePlane, 0.0f});
+                }
+
+                // safely handle when the camera is looking too close to the horizon (shift the forward vector a bit to ensure the intersection test succeeds for aimpoint_1)
+                glm::vec3 cameraForwardIntersectionSafe{m_camera->getForward()};
+                float const SAFE_EPSILON{0.001f};
+                if (glm::abs(cameraForwardIntersectionSafe.y) < SAFE_EPSILON) {
+                    float const sign{cameraForwardIntersectionSafe.y >= 0.0f ? 1.0f : -1.0f};
+                    cameraForwardIntersectionSafe.y = sign * SAFE_EPSILON;
+                    //NOTE: there is no need to normalize this (and I don't want to cause the ypos will decrease)
+                }
+
+                // compute aimpoint for method 1 (bird's eye)...
+                glm::vec3 aimpoint_1;
+                bool const isLookingDown{cameraForwardIntersectionSafe.y < 0.0f};
+                bool const isLookingDown_XOR_isUnderwater{isLookingDown != isUnderwater};
+                if (isLookingDown_XOR_isUnderwater) {
+                    bool const isIntersection{utils::linePlaneIntersection(aimpoint_1, geometry::Line{m_camera->getPosition(), m_camera->getPosition() + cameraForwardIntersectionSafe}, basePlane)};
+                    assert(isIntersection);
+                } else {
+                    glm::vec3 const cameraForwardIntersectionSafeMirrored{glm::reflect(cameraForwardIntersectionSafe, basePlane.getNormalVec())};
+                    bool const isIntersection{utils::linePlaneIntersection(aimpoint_1, geometry::Line{m_camera->getPosition(), m_camera->getPosition() + cameraForwardIntersectionSafeMirrored}, basePlane)};
+                    assert(isIntersection);
+                }
+
+                // compute aimpoint for method 2 (horizon)...
+                //TODO: make this a UI property? auto-generate it?
+                float const FORWARD_FIXED_LENGTH{10.0f};
+                glm::vec3 aimpoint_2{m_camera->getPosition() + FORWARD_FIXED_LENGTH * m_camera->getForward()};
+                // project this point onto the base plane
+                aimpoint_2.y = 0.0f;
+
+                //NOTE: the grid changes abruptly when aimpoint_final == aimpoint2 (a == 0), but this will never occur since...
+                //      I made the camera's forward vector (for the math only) intersection safe (aimpoint_1 will be defined and a != 0.0)
+                // compute the interpolation coefficient in range [SAFE_EPSILON, 1.0]...
+                float const a{glm::abs(cameraForwardIntersectionSafe.y)};
+
+                // compute the final aimpoint as an interpolation between the two aimpoints...
+                glm::vec3 const aimpoint_final{glm::mix(aimpoint_2, aimpoint_1, a)};
+
+                // compute the projector's pitch in order to aim at this aimpoint...
+                glm::vec3 const projectorNewForwardVec{glm::normalize(aimpoint_final - projector.getPosition())};
+                glm::vec3 const projectorNewForwardVecXZProjection{glm::normalize(glm::vec3{projectorNewForwardVec.x, 0.0f, projectorNewForwardVec.z})};
+                //NOTE: the projector's position will always be above water, thus the pitch will always be negative
+                float projectorNewPitchDegrees{-glm::degrees(glm::acos(glm::dot(projectorNewForwardVec, projectorNewForwardVecXZProjection)))};
+
+                // now, aim the projector...
+                projector.setRotation(projector.getYaw(), projectorNewPitchDegrees);
+                ///////////////////////////////////////////////////////////////////////////////////
 
                 // project all intersection points onto base plane...
                 for (unsigned int i = 0; i < intersectionPoints.size(); ++i) {
@@ -207,7 +274,7 @@ namespace wave_tool {
                 // reference: https://community.khronos.org/t/homogenous-normalized-device-coords-and-clipping/61965
                 // reference: https://stackoverflow.com/questions/21841598/when-does-the-transition-from-clip-space-to-screen-coordinates-happen
                 //NOTE: I was having a lot of issues before I divided by w, so hopefully everything works now
-                glm::mat4 const projector_viewProjectionMat{ projector.getProjectionMat() * projector.getViewMat() };
+                glm::mat4 const projector_viewProjectionMat{projector.getProjectionMat() * projector.getViewMat()};
                 for (unsigned int i = 0; i < intersectionPoints.size(); ++i) {
                     glm::vec4 const temp{projector_viewProjectionMat * intersectionPoints.at(i)}; // now in clip-space
                     intersectionPoints.at(i) = temp / temp.w; // now in NDC-space
@@ -287,7 +354,8 @@ namespace wave_tool {
                 //TODO: make this a UI setting (and probably should store this with the mesh itself since drawFaces will be closely related)
                 //TODO: might even split this into a width/height (or hres/vres) in the future for non-square grids
                 //NOTE: this should be >= 2
-                GLuint const GRID_LENGTH = 65;
+                //GLuint const GRID_LENGTH = 65;
+                GLuint const GRID_LENGTH = 257;
 
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "bottomLeftGridPointInWorld"), 1, glm::value_ptr(bottomLeftGridPointInWorld));
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "bottomRightGridPointInWorld"), 1, glm::value_ptr(bottomRightGridPointInWorld));
