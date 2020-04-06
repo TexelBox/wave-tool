@@ -93,31 +93,42 @@ namespace wave_tool {
 
     class RenderEngine {
         public:
+            //TODO: refactor these UI params out into a struct
+            float cloudProportion = 0.6f; // in range [0.0, 1.0]
+            float overcastStrength = 0.0f; // in range [0.0, 1.0]
+            float sunHorizonDarkness = 0.25f; // in range [0.0, 1.0]
+            float sunShininess = 50.0f; // in range [0.0, inf)
+            float sunStrength = 1.0f; // in range [0.0, 1.0]
+            float timeOfDayInHours = 9.0f; // in range [0.0, 24.0]
+
             RenderEngine(GLFWwindow *window);
 
             std::shared_ptr<Camera> getCamera() const;
 
-            void render(std::shared_ptr<const MeshObject> skybox, std::shared_ptr<const MeshObject> waterGrid, std::vector<std::shared_ptr<MeshObject>> const& objects);
+            void render(std::shared_ptr<const MeshObject> skyboxStars, std::shared_ptr<const MeshObject> skysphere, std::shared_ptr<const MeshObject> skyboxClouds, std::shared_ptr<const MeshObject> waterGrid, std::vector<std::shared_ptr<MeshObject>> const& objects);
             //void renderLight();
             void assignBuffers(MeshObject &object);
             void updateBuffers(MeshObject &object, bool const updateVerts, bool const updateUVs, bool const updateNormals, bool const updateColours);
 
             void setWindowSize(int width, int height);
 
-            void updateLightPos(glm::vec3 add);
+            //void updateLightPos(glm::vec3 add);
 
+            GLuint load1DTexture(std::string const& filePath);
             GLuint load2DTexture(std::string const& filePath);
             GLuint loadCubemap(std::vector<std::string> const& faces);
         private:
             std::shared_ptr<Camera> m_camera = nullptr;
 
             GLuint skyboxProgram;
+            GLuint skyboxStarsProgram;
+            GLuint skysphereProgram;
             GLuint trivialProgram;
             GLuint mainProgram;
             //GLuint lightProgram;
             GLuint waterGridProgram;
 
-            glm::vec3 lightPos;
+            //glm::vec3 lightPos;
     };
 }
 

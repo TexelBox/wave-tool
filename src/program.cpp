@@ -60,7 +60,7 @@ namespace wave_tool {
             // rendering...
             ImGui::Render();
             //image.Render();
-            m_renderEngine->render(m_skybox, m_waterGrid, m_meshObjects);
+            m_renderEngine->render(m_skyboxStars, m_skysphere, m_skyboxClouds, m_waterGrid, m_meshObjects);
 
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -83,10 +83,6 @@ namespace wave_tool {
 
         ImGui::Separator();
 
-        ImGui::Text("TODO...");
-
-        ImGui::Separator();
-
         if (nullptr != m_yzPlane) {
             if (ImGui::Button("TOGGLE YZ-PLANE / +X-AXIS (RED)")) m_yzPlane->m_isVisible = !m_yzPlane->m_isVisible;
             ImGui::SameLine();
@@ -102,6 +98,38 @@ namespace wave_tool {
         if (nullptr != m_yzPlane || nullptr != m_xzPlane || nullptr != m_xyPlane) {
             ImGui::Text("   note: grid spacing is 10 units");
             ImGui::Separator();
+        }
+
+        ImGui::Separator();
+
+        if (ImGui::SliderFloat("TIME OF DAY (HOURS)", &m_renderEngine->timeOfDayInHours, 0.0f, 24.0f)) {
+            // force-clamp (handle CTRL + LEFT_CLICK)
+            m_renderEngine->timeOfDayInHours = glm::clamp(m_renderEngine->timeOfDayInHours, 0.0f, 24.0f);
+        }
+
+        if (ImGui::SliderFloat("CLOUD PROPORTION", &m_renderEngine->cloudProportion, 0.0f, 1.0f)) {
+            // force-clamp (handle CTRL + LEFT_CLICK)
+            m_renderEngine->cloudProportion = glm::clamp(m_renderEngine->cloudProportion, 0.0f, 1.0f);
+        }
+
+        if (ImGui::SliderFloat("OVERCAST STRENGTH", &m_renderEngine->overcastStrength, 0.0f, 1.0f)) {
+            // force-clamp (handle CTRL + LEFT_CLICK)
+            m_renderEngine->overcastStrength = glm::clamp(m_renderEngine->overcastStrength, 0.0f, 1.0f);
+        }
+
+        if (ImGui::SliderFloat("SUN-HORIZON DARKNESS", &m_renderEngine->sunHorizonDarkness, 0.0f, 1.0f)) {
+            // force-clamp (handle CTRL + LEFT_CLICK)
+            m_renderEngine->sunHorizonDarkness = glm::clamp(m_renderEngine->sunHorizonDarkness, 0.0f, 1.0f);
+        }
+
+        if (ImGui::SliderFloat("SUN SHININESS", &m_renderEngine->sunShininess, 0.0f, 200.0f)) {
+            // force-clamp (handle CTRL + LEFT_CLICK)
+            if (m_renderEngine->sunShininess < 0.0f) m_renderEngine->sunShininess = 0.0f;
+        }
+
+        if (ImGui::SliderFloat("SUN STRENGTH", &m_renderEngine->sunStrength, 0.0f, 1.0f)) {
+            // force-clamp (handle CTRL + LEFT_CLICK)
+            m_renderEngine->sunStrength = glm::clamp(m_renderEngine->sunStrength, 0.0f, 1.0f);
         }
 
         ImGui::Separator();
@@ -231,29 +259,62 @@ namespace wave_tool {
         }
         */
 
-        //TODO: save a bunch of skyboxes that can be toggled back and forth (along with sun position?)
         //TODO: is it possible to mirror the skybox textures on loading them in (since we are inside the cube), but keeping the proper orientation???
-        // hard-coded skybox...
-        m_skybox = ObjectLoader::createTriMeshObject("../../assets/models/imports/cube.obj", true, true);
-        if (nullptr != m_skybox) {
-            m_skybox->textureID = m_renderEngine->loadCubemap({"../../assets/textures/skyboxes/sunny/TropicalSunnyDay_px.jpg",
-                                                               "../../assets/textures/skyboxes/sunny/TropicalSunnyDay_nx.jpg",
-                                                               "../../assets/textures/skyboxes/sunny/TropicalSunnyDay_py.jpg",
-                                                               "../../assets/textures/skyboxes/sunny/TropicalSunnyDay_ny.jpg",
-                                                               "../../assets/textures/skyboxes/sunny/TropicalSunnyDay_pz.jpg",
-                                                               "../../assets/textures/skyboxes/sunny/TropicalSunnyDay_nz.jpg"});
+        // hard-coded skyboxes...
+
+        // this will hold the skybox geometry (cube) and star skybox cubemap
+        m_skyboxStars = ObjectLoader::createTriMeshObject("../../assets/models/imports/cube.obj", true, true);
+        if (nullptr != m_skyboxStars) {
+            m_skyboxStars->textureID = m_renderEngine->loadCubemap({"../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-4096/right.png",
+                                                                    "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-4096/left.png",
+                                                                    "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-4096/top.png",
+                                                                    "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-4096/bottom.png",
+                                                                    "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-4096/front.png",
+                                                                    "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-4096/back.png"});
+
             // if there was an error
             // fallback#1 (use debug skybox) (if this fails too for some reason, then there won't be a skybox)
-            if (0 == m_skybox->textureID) m_skybox->textureID = m_renderEngine->loadCubemap({"../../assets/textures/skyboxes/debug/_px.jpg",
-                                                                                             "../../assets/textures/skyboxes/debug/_nx.jpg",
-                                                                                             "../../assets/textures/skyboxes/debug/_py.jpg",
-                                                                                             "../../assets/textures/skyboxes/debug/_ny.jpg",
-                                                                                             "../../assets/textures/skyboxes/debug/_pz.jpg",
-                                                                                             "../../assets/textures/skyboxes/debug/_nz.jpg"});
-            // fallback#2 (no skybox, you will just see the clear colour)
-            if (0 == m_skybox->textureID) m_skybox = nullptr;
+            if (0 == m_skyboxStars->textureID) m_skyboxStars->textureID = m_renderEngine->loadCubemap({"../../assets/textures/skyboxes/debug/_px.jpg",
+                                                                                                       "../../assets/textures/skyboxes/debug/_nx.jpg",
+                                                                                                       "../../assets/textures/skyboxes/debug/_py.jpg",
+                                                                                                       "../../assets/textures/skyboxes/debug/_ny.jpg",
+                                                                                                       "../../assets/textures/skyboxes/debug/_pz.jpg",
+                                                                                                       "../../assets/textures/skyboxes/debug/_nz.jpg"});
+            // fallback#2 (no skybox, you will just see the background colour)
+            if (0 == m_skyboxStars->textureID) m_skyboxStars = nullptr;
+            if (nullptr != m_skyboxStars) m_renderEngine->assignBuffers(*m_skyboxStars);
         }
-        m_renderEngine->assignBuffers(*m_skybox);
+
+        // skysphere...
+        m_skysphere = ObjectLoader::createTriMeshObject("../../assets/models/imports/uv-sphere.obj", true, true);
+        if (nullptr != m_skysphere) {
+            m_skysphere->textureID = m_renderEngine->load1DTexture("../../assets/textures/sky-gradient.png");
+            // fallback (skysphere won't be renderable)
+            if (0 == m_skysphere->textureID) m_skysphere = nullptr;
+            if (nullptr != m_skysphere) m_renderEngine->assignBuffers(*m_skysphere);
+        }
+
+        // this will hold the skybox geometry (cube) and cloud skybox cubemap
+        m_skyboxClouds = ObjectLoader::createTriMeshObject("../../assets/models/imports/cube.obj", true, true);
+        if (nullptr != m_skyboxClouds) {
+            m_skyboxClouds->textureID = m_renderEngine->loadCubemap({"../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-4096/right.png",
+                                                                     "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-4096/left.png",
+                                                                     "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-4096/top.png",
+                                                                     "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-4096/bottom.png",
+                                                                     "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-4096/front.png",
+                                                                     "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-4096/back.png"});
+            // if there was an error
+            // fallback#1 (use debug skybox) (if this fails too for some reason, then there won't be a skybox)
+            if (0 == m_skyboxClouds->textureID) m_skyboxClouds->textureID = m_renderEngine->loadCubemap({"../../assets/textures/skyboxes/debug/_px.jpg",
+                                                                                                         "../../assets/textures/skyboxes/debug/_nx.jpg",
+                                                                                                         "../../assets/textures/skyboxes/debug/_py.jpg",
+                                                                                                         "../../assets/textures/skyboxes/debug/_ny.jpg",
+                                                                                                         "../../assets/textures/skyboxes/debug/_pz.jpg",
+                                                                                                         "../../assets/textures/skyboxes/debug/_nz.jpg"});
+            // fallback#2 (no skybox, you will just see the background colour)
+            if (0 == m_skyboxClouds->textureID) m_skyboxClouds = nullptr;
+            if (nullptr != m_skyboxClouds) m_renderEngine->assignBuffers(*m_skyboxClouds);
+        }
 
         m_waterGrid = std::make_shared<MeshObject>();
         //m_waterGrid->m_polygonMode = PolygonMode::POINT; //NOTE: doing this atm makes a cool pixel art world

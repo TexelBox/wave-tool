@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="4096"
+   height="1"
+   viewBox="0 0 4096 1"
+   version="1.1"
+   id="svg8"
+   inkscape:version="0.92.4 (5da689c313, 2019-01-14)"
+   sodipodi:docname="sky-gradient.svg">
+  <defs
+     id="defs2">
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient818">
+      <stop
+         style="stop-color:#000000;stop-opacity:1"
+         offset="0"
+         id="stop814" />
+      <stop
+         style="stop-color:#000000;stop-opacity:1"
+         offset="0.2"
+         id="stop824" />
+      <stop
+         id="stop840"
+         offset="0.25"
+         style="stop-color:#ff6600;stop-opacity:1" />
+      <stop
+         id="stop826"
+         offset="0.27500001"
+         style="stop-color:#ff9955;stop-opacity:1" />
+      <stop
+         style="stop-color:#ffccaa;stop-opacity:1"
+         offset="0.30000001"
+         id="stop846" />
+      <stop
+         style="stop-color:#ffeeaa;stop-opacity:1"
+         offset="0.32499999"
+         id="stop828" />
+      <stop
+         id="stop848"
+         offset="0.34999999"
+         style="stop-color:#d5f6ff;stop-opacity:1" />
+      <stop
+         id="stop830"
+         offset="0.5"
+         style="stop-color:#2ad4ff;stop-opacity:1" />
+      <stop
+         style="stop-color:#00ccff;stop-opacity:1"
+         offset="0.64999998"
+         id="stop832" />
+      <stop
+         id="stop834"
+         offset="0.67500001"
+         style="stop-color:#00aad4;stop-opacity:1" />
+      <stop
+         style="stop-color:#0088aa;stop-opacity:1"
+         offset="0.69999999"
+         id="stop850" />
+      <stop
+         id="stop852"
+         offset="0.72500002"
+         style="stop-color:#006680;stop-opacity:1" />
+      <stop
+         style="stop-color:#004455;stop-opacity:1"
+         offset="0.75"
+         id="stop844" />
+      <stop
+         style="stop-color:#000000;stop-opacity:1"
+         offset="0.80000001"
+         id="stop836" />
+      <stop
+         style="stop-color:#000000;stop-opacity:1"
+         offset="1"
+         id="stop816" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient818"
+       id="linearGradient820"
+       x1="0"
+       y1="296.86771"
+       x2="6.3499999"
+       y2="296.86771"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(645.03942,0,0,3.7795278,0,-825.51973)" />
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.979899"
+     inkscape:cx="976.65718"
+     inkscape:cy="24.335461"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1920"
+     inkscape:window-height="1057"
+     inkscape:window-x="1912"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     units="px"
+     inkscape:pagecheckerboard="true"
+     inkscape:showpageshadow="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-296)">
+    <rect
+       style="opacity:1;fill:url(#linearGradient820);fill-opacity:1;stroke:none;stroke-width:577.909729;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect812"
+       width="4096"
+       height="1"
+       x="0"
+       y="296"
+       inkscape:export-filename="D:\Aaron\Desktop\LocalCoding\gitrepos\wave-tool\assets\textures\sky-gradient.png"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96" />
+  </g>
+</svg>

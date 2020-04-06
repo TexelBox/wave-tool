@@ -7,10 +7,13 @@
 namespace wave_tool {
     class Texture {
         public:
+            static GLuint create1DTexture(unsigned char *data, unsigned int length);
             static GLuint create2DTexture(unsigned char *data, unsigned int width, unsigned int height);
 
+            static void bind1DTexture(GLuint _program, GLuint _textureID, std::string const& varName);
             static void bind2DTexture(GLuint _program, GLuint _textureID, std::string const& varName);
 
+            static void unbind1DTexture();
             static void unbind2DTexture();
     };
 }
