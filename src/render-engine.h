@@ -94,7 +94,9 @@ namespace wave_tool {
     class RenderEngine {
         public:
             //TODO: refactor these UI params out into a struct
+            float animationSpeedTimeOfDayInSecondsPerHour = 1.0f; // in range [0.0, inf)
             float cloudProportion = 0.6f; // in range [0.0, 1.0]
+            bool isAnimatingTimeOfDay = false;
             float overcastStrength = 0.0f; // in range [0.0, 1.0]
             float sunHorizonDarkness = 0.25f; // in range [0.0, 1.0]
             float sunShininess = 50.0f; // in range [0.0, inf)

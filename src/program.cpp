@@ -112,6 +112,27 @@ namespace wave_tool {
             m_renderEngine->timeOfDayInHours = glm::clamp(m_renderEngine->timeOfDayInHours, 0.0f, 24.0f);
         }
 
+        if (ImGui::Button("TOGGLE ANIMATION")) {
+            m_renderEngine->isAnimatingTimeOfDay = !m_renderEngine->isAnimatingTimeOfDay;
+        }
+        ImGui::SameLine();
+
+        ImGui::PushItemWidth(300.0f);
+        if (ImGui::SliderFloat("ANIMATION SPEED (REAL-TIME SECONDS PER SIMULATED HOUR)", &m_renderEngine->animationSpeedTimeOfDayInSecondsPerHour, 0.0f, 60.0f)) {
+            // force-clamp (handle CTRL + LEFT_CLICK)
+            if (m_renderEngine->animationSpeedTimeOfDayInSecondsPerHour < 0.0f) m_renderEngine->animationSpeedTimeOfDayInSecondsPerHour = 0.0f;
+        }
+        ImGui::PopItemWidth();
+
+        //TODO: refactor this into its own function somewhere else...
+        //TODO: check if this ImGui framerate is applicable here (or is it an average of several frames???)
+        if (m_renderEngine->isAnimatingTimeOfDay && m_renderEngine->animationSpeedTimeOfDayInSecondsPerHour > 0.0f) {
+            float const deltaTimeInSeconds = 1.0f / ImGui::GetIO().Framerate;
+            float const deltaTimeOfDayInHours = (1.0f / m_renderEngine->animationSpeedTimeOfDayInSecondsPerHour) * deltaTimeInSeconds;
+            m_renderEngine->timeOfDayInHours += deltaTimeOfDayInHours;
+            m_renderEngine->timeOfDayInHours = glm::mod(m_renderEngine->timeOfDayInHours, 24.0f);
+        }
+
         if (ImGui::SliderFloat("CLOUD PROPORTION", &m_renderEngine->cloudProportion, 0.0f, 1.0f)) {
             // force-clamp (handle CTRL + LEFT_CLICK)
             m_renderEngine->cloudProportion = glm::clamp(m_renderEngine->cloudProportion, 0.0f, 1.0f);
