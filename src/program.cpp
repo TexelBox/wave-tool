@@ -83,6 +83,11 @@ namespace wave_tool {
 
         ImGui::Separator();
 
+        // reference: https://github.com/ocornut/imgui/blob/cc0d4e346a3e4a5408c85c7e6bf0df5e1307bb2d/examples/example_marmalade/main.cpp#L93
+        ImGui::Text("AVG. FRAMETIME (VSYNC ON) - %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+        ImGui::Separator();
+
         if (nullptr != m_yzPlane) {
             if (ImGui::Button("TOGGLE YZ-PLANE / +X-AXIS (RED)")) m_yzPlane->m_isVisible = !m_yzPlane->m_isVisible;
             ImGui::SameLine();
