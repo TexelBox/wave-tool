@@ -120,7 +120,7 @@ namespace wave_tool {
         private:
             std::shared_ptr<Camera> m_camera = nullptr;
 
-            GLuint skyboxProgram;
+            GLuint skyboxCloudsProgram;
             GLuint skyboxStarsProgram;
             GLuint skysphereProgram;
             GLuint trivialProgram;

@@ -14,7 +14,7 @@ namespace wave_tool {
         //NOTE: near distance must be small enough to not conflict with skybox size
         m_camera = std::make_shared<Camera>(72.0f, (float)width / height, 0.1f, 5000.0f, glm::vec3(0.0f, 1000.0f, 1000.0f));
 
-        skyboxProgram = ShaderTools::compileShaders("../../assets/shaders/skybox.vert", "../../assets/shaders/skybox.frag");
+        skyboxCloudsProgram = ShaderTools::compileShaders("../../assets/shaders/skybox-clouds.vert", "../../assets/shaders/skybox-clouds.frag");
         skyboxStarsProgram = ShaderTools::compileShaders("../../assets/shaders/skybox-stars.vert", "../../assets/shaders/skybox-stars.frag");
         skysphereProgram = ShaderTools::compileShaders("../../assets/shaders/skysphere.vert", "../../assets/shaders/skysphere.frag");
         trivialProgram = ShaderTools::compileShaders("../../assets/shaders/trivial.vert", "../../assets/shaders/trivial.frag");
@@ -122,24 +122,24 @@ namespace wave_tool {
             // disable depth writing to draw skybox behind everything drawn after
             glDepthMask(GL_FALSE);
             // enable skybox shader
-            glUseProgram(skyboxProgram);
+            glUseProgram(skyboxCloudsProgram);
             glm::mat4 const viewNoTranslation = glm::mat4(glm::mat3(view));
             glm::mat4 const VPNoTranslation = projection * viewNoTranslation;
             // set VP matrix uniform in shader program
-            glUniformMatrix4fv(glGetUniformLocation(skyboxProgram, "VPNoTranslation"), 1, GL_FALSE, glm::value_ptr(VPNoTranslation));
+            glUniformMatrix4fv(glGetUniformLocation(skyboxCloudsProgram, "VPNoTranslation"), 1, GL_FALSE, glm::value_ptr(VPNoTranslation));
             // bind geometry data...
             glBindVertexArray(skyboxClouds->vao);
 
-            glUniform1f(glGetUniformLocation(skyboxProgram, "oneMinusCloudProportion"), oneMinusCloudProportion);
-            glUniform1f(glGetUniformLocation(skyboxProgram, "overcastStrength"), overcastStrength);
+            glUniform1f(glGetUniformLocation(skyboxCloudsProgram, "oneMinusCloudProportion"), oneMinusCloudProportion);
+            glUniform1f(glGetUniformLocation(skyboxCloudsProgram, "overcastStrength"), overcastStrength);
 
             // bind texture...
             glActiveTexture(GL_TEXTURE0 + skyboxClouds->textureID);
             glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxClouds->textureID);
             // set skyboxClouds samplerCube uniform in shader program
-            glUniform1i(glGetUniformLocation(skyboxProgram, "skyboxClouds"), skyboxClouds->textureID);
+            glUniform1i(glGetUniformLocation(skyboxCloudsProgram, "skyboxClouds"), skyboxClouds->textureID);
 
-            glUniform3fv(glGetUniformLocation(skyboxProgram, "sunPosition"), 1, glm::value_ptr(sunPosition));
+            glUniform3fv(glGetUniformLocation(skyboxCloudsProgram, "sunPosition"), 1, glm::value_ptr(sunPosition));
 
             // POINT, LINE or FILL...
             glPolygonMode(GL_FRONT_AND_BACK, skyboxClouds->m_polygonMode);
