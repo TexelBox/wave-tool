@@ -7,6 +7,7 @@
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <array>
 #include <memory>
 #include <vector>
 
@@ -49,6 +50,7 @@ namespace wave_tool {
                 : a{a}, b{b}, c{c}, d{d}
             {
                 assert(0.0f != a || 0.0f != b || 0.0f != c); // assert that plane normal is non-zero
+                //TODO: change this cause the comparison is unstable!
                 assert(1.0f == a * a + b * b + c * c); // assert that normal vector is a unit vector
             }
 
@@ -91,17 +93,67 @@ namespace wave_tool {
         }
     }
 
+    namespace geometry {
+        // reference: https://developer.nvidia.com/gpugems/gpugems/part-i-natural-effects/chapter-1-effective-water-simulation-physical-models
+        //TODO: the statics are very unsafe at the moment
+        struct GerstnerWave {
+            public:
+                static unsigned int const MAX_COUNT = 4;
+                static_assert(MAX_COUNT > 0);
+
+                inline static unsigned int Count() { return count; }
+                inline static float TotalAmplitude() { return totalAmplitude; }
+
+                float amplitude_A; // height of crest above equilibrium plane
+                float frequency_w; // w = 2/L (roughly), where L =:= wavelength (crest-to-crest distance)
+                float phaseConstant_phi; // phi = S x w, where S =:= speed (distance crest moves forward per second)
+                float steepness_Q; // controls "sharpness" of crest
+                glm::vec2 xzDirection_D; // horizontal unit vector perpendicular to the wave front along which the crest travels 
+
+                GerstnerWave(float const amplitude_A, float const frequency_w, float const phaseConstant_phi, float const steepness_Q, glm::vec2 const& xzDirection_D)
+                    : amplitude_A(amplitude_A), frequency_w(frequency_w), phaseConstant_phi(phaseConstant_phi), steepness_Q(steepness_Q), xzDirection_D(xzDirection_D)
+                {
+                    assert(count < MAX_COUNT);
+                    assert(amplitude_A >= 0.0f);
+                    assert(frequency_w >= 0.0f);
+                    assert(phaseConstant_phi >= 0.0f);
+                    assert(0.0f <= steepness_Q && steepness_Q <= 1.0f);
+                    float const EPSILON{0.001f};
+                    float const xzDirection_D_length{glm::length(xzDirection_D)};
+                    assert(1.0f - EPSILON <= xzDirection_D_length && xzDirection_D_length <= 1.0f + EPSILON);
+
+                    ++count;
+                    totalAmplitude += amplitude_A;
+                }
+
+                ~GerstnerWave() {
+                    --count;
+                    totalAmplitude -= amplitude_A;
+                }
+            private:
+                inline static unsigned int count = 0;
+                inline static float totalAmplitude = 0.0f;
+        };
+    }
+
     class RenderEngine {
         public:
             //TODO: refactor these UI params out into a struct
             float animationSpeedTimeOfDayInSecondsPerHour = 1.0f; // in range [0.0, inf)
+            float animationSpeedVerticalBounceWavePhasePeriodInSeconds = 3.0f; // in range [0.0, inf)
             float cloudProportion = 0.6f; // in range [0.0, 1.0]
             bool isAnimatingTimeOfDay = false;
+            bool isAnimatingWaves = true;
             float overcastStrength = 0.0f; // in range [0.0, 1.0]
             float sunHorizonDarkness = 0.25f; // in range [0.0, 1.0]
             float sunShininess = 50.0f; // in range [0.0, inf)
             float sunStrength = 1.0f; // in range [0.0, 1.0]
             float timeOfDayInHours = 9.0f; // in range [0.0, 24.0]
+            float waveAnimationTimeInSeconds = 0.0f; // in range [0.0, inf)
+            float verticalBounceWaveAmplitude = 5.0f; // in range [0.0, inf)
+            float verticalBounceWavePhase = 0.0f; // in range [0.0, 1.0]
+
+            std::array<std::shared_ptr<geometry::GerstnerWave>, geometry::GerstnerWave::MAX_COUNT> gerstnerWaves;
 
             RenderEngine(GLFWwindow *window);
 

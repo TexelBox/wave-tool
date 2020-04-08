@@ -112,7 +112,7 @@ namespace wave_tool {
             m_renderEngine->timeOfDayInHours = glm::clamp(m_renderEngine->timeOfDayInHours, 0.0f, 24.0f);
         }
 
-        if (ImGui::Button("TOGGLE ANIMATION")) {
+        if (ImGui::Button("TOGGLE ANIMATION##0")) {
             m_renderEngine->isAnimatingTimeOfDay = !m_renderEngine->isAnimatingTimeOfDay;
         }
         ImGui::SameLine();
@@ -156,6 +156,49 @@ namespace wave_tool {
         if (ImGui::SliderFloat("SUN STRENGTH", &m_renderEngine->sunStrength, 0.0f, 1.0f)) {
             // force-clamp (handle CTRL + LEFT_CLICK)
             m_renderEngine->sunStrength = glm::clamp(m_renderEngine->sunStrength, 0.0f, 1.0f);
+        }
+
+        ImGui::Separator();
+
+        if (ImGui::SliderFloat("VERTICAL-BOUNCE-WAVE PHASE", &m_renderEngine->verticalBounceWavePhase, 0.0f, 1.0f)) {
+            // force-clamp (handle CTRL + LEFT_CLICK)
+            m_renderEngine->verticalBounceWavePhase = glm::clamp(m_renderEngine->verticalBounceWavePhase, 0.0f, 1.0f);
+        }
+
+        //TODO: once i figure out why the Gerstner waves decay over time, change the max here to an appropriate value (and maybe clamp or mod???)
+        //      maybe there is a looping here that I can take advantage of
+        //if (ImGui::SliderFloat("WAVE-ANIMATION TIME (s)", &m_renderEngine->waveAnimationTimeInSeconds, 0.0f, std::numeric_limits<float>::max())) {
+        if (ImGui::SliderFloat("WAVE-ANIMATION TIME (s)", &m_renderEngine->waveAnimationTimeInSeconds, 0.0f, 3600.0f)) {
+            // force-clamp (handle CTRL + LEFT_CLICK)
+            if (m_renderEngine->waveAnimationTimeInSeconds < 0.0f) m_renderEngine->waveAnimationTimeInSeconds = 0.0f;
+        }
+
+        if (ImGui::Button("TOGGLE ANIMATION##1")) {
+            m_renderEngine->isAnimatingWaves = !m_renderEngine->isAnimatingWaves;
+        }
+        ImGui::SameLine();
+
+        ImGui::PushItemWidth(300.0f);
+        if (ImGui::SliderFloat("ANIMATION SPEED (VERTICAL-BOUNCE-WAVE PERIOD (s))", &m_renderEngine->animationSpeedVerticalBounceWavePhasePeriodInSeconds, 0.0f, 60.0f)) {
+            // force-clamp (handle CTRL + LEFT_CLICK)
+            if (m_renderEngine->animationSpeedVerticalBounceWavePhasePeriodInSeconds < 0.0f) m_renderEngine->animationSpeedVerticalBounceWavePhasePeriodInSeconds = 0.0f;
+        }
+        ImGui::PopItemWidth();
+
+        //TODO: refactor this into its own function somewhere else...
+        //TODO: check if this ImGui framerate is applicable here (or is it an average of several frames???)
+        if (m_renderEngine->isAnimatingWaves) {
+            float const deltaTimeInSeconds = 1.0f / ImGui::GetIO().Framerate;
+
+            m_renderEngine->waveAnimationTimeInSeconds += deltaTimeInSeconds;
+            // handle overflow...
+            if (m_renderEngine->waveAnimationTimeInSeconds < 0.0f) m_renderEngine->waveAnimationTimeInSeconds = 0.0f;
+
+            if (m_renderEngine->animationSpeedVerticalBounceWavePhasePeriodInSeconds > 0.0f) {
+                float const deltaVerticalBounceWavePhase = (1.0f / m_renderEngine->animationSpeedVerticalBounceWavePhasePeriodInSeconds) * deltaTimeInSeconds;
+                m_renderEngine->verticalBounceWavePhase += deltaVerticalBounceWavePhase;
+                m_renderEngine->verticalBounceWavePhase = glm::mod(m_renderEngine->verticalBounceWavePhase, 1.0f);
+            }
         }
 
         ImGui::Separator();

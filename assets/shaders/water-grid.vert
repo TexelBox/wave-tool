@@ -1,20 +1,53 @@
 #version 410 core
 
+//NOTE: this must match the value in the C++ program
+const uint MAX_COUNT_OF_GERSTNER_WAVES = 4;
+
 uniform vec4 bottomLeftGridPointInWorld;
 uniform vec4 bottomRightGridPointInWorld;
 uniform vec3 cameraPosition;
+
+// reference: https://developer.nvidia.com/gpugems/gpugems/part-i-natural-effects/chapter-1-effective-water-simulation-physical-models
+// reference: https://github.com/CaffeineViking/osgw/blob/master/share/shaders/gerstner.glsl
+// caller must pass in the number of initialized waves
+uniform uint gerstnerWaveCount = 0;
+uniform struct GerstnerWave {
+    float amplitude_A;
+    float frequency_w;
+    float phaseConstant_phi;
+    float steepness_Q_i;
+    vec2 xzDirection_D;
+} gerstnerWaves[MAX_COUNT_OF_GERSTNER_WAVES];
+
 // assuming a square grid, we get gridLength = sqrt(gridResolution) - e.g. 4x4 grid means resolution of 16 and length of 4
 //NOTE: we are assuming that gridLength >= 2
 uniform uint gridLength;
 uniform sampler2D heightmap;
 uniform vec4 topLeftGridPointInWorld;
 uniform vec4 topRightGridPointInWorld;
+uniform float verticalBounceWaveAmplitude; // in range [0.0, inf)
+uniform float verticalBounceWavePhaseShift; // in range [0.0, 2*pi]
 uniform mat4 viewProjection;
-uniform float waveAmplitude;
+uniform float waveAnimationTimeInSeconds; // in range [0.0, inf)
 
 out vec4 heightmap_colour;
 out vec3 normal;
 out vec3 viewVec;
+
+// reference: https://developer.nvidia.com/gpugems/gpugems/part-i-natural-effects/chapter-1-effective-water-simulation-physical-models
+//TODO: it seems like the direction is interpreted backwards?
+vec3 computeGerstnerSurfacePosition(in vec2 xzGridPosition, in float timeInSeconds) {
+    vec3 gerstnerSurfacePosition = vec3(xzGridPosition.x, 0.0f, xzGridPosition.y);
+    for (uint i = 0; i < gerstnerWaveCount; ++i) {
+        // this contribution of this wave...
+        float xyzConstant_1 = gerstnerWaves[i].frequency_w * dot(gerstnerWaves[i].xzDirection_D, xzGridPosition) + gerstnerWaves[i].phaseConstant_phi * timeInSeconds;
+        float xzConstant_1 = gerstnerWaves[i].steepness_Q_i * cos(xyzConstant_1);
+        vec3 gerstnerWavePosition = gerstnerWaves[i].amplitude_A * vec3(gerstnerWaves[i].xzDirection_D.x * xzConstant_1, sin(xyzConstant_1), gerstnerWaves[i].xzDirection_D.y * xzConstant_1);
+        gerstnerSurfacePosition += gerstnerWavePosition;
+    }
+
+    return gerstnerSurfacePosition;
+}
 
 vec4 computeInterpolatedGridPosition(in vec2 uv) {
     vec4 mix_u_1 = mix(bottomLeftGridPointInWorld, bottomRightGridPointInWorld, uv.s);
@@ -40,11 +73,13 @@ vec4 sampleHeightmap(in vec4 position) {
     return texture(heightmap, vec2(position.x / heightmap_hres, -position.z / heightmap_vres));
 }
 
-//TODO: animate this with a passed in uniform (can use sin() oscillation)
-float computeYPosition(in vec4 heightmapSample) {
+//TODO: maybe decouple this from the heightmap bumping (must rename stuff everywhere)
+//      if I do this, then I would have to add the extra heightmap amplitude scalar to the max total possible amplitude accounted by the projected grid
+//      this "bumping delta" would be equal to bumpingAmplitude * heightmap_intensity_neg1_to_1
+float computeVerticalBounceWaveDeltaY(in vec4 heightmapSample) {
     float heightmap_intensity_0_to_1 = heightmapSample.r;
     float heightmap_intensity_neg1_to_1 = 2.0f * (heightmap_intensity_0_to_1 - 0.5f);
-    return waveAmplitude * heightmap_intensity_neg1_to_1;
+    return verticalBounceWaveAmplitude * (heightmap_intensity_neg1_to_1 + sin(verticalBounceWavePhaseShift)) / 2.0f;
 }
 
 void main() {
@@ -71,10 +106,13 @@ void main() {
     vec4 position = computeInterpolatedGridPosition(uv);
 
     // output a debug colour corresponding to the sampled heightmap colour
+    //TODO: what if I sample the heightmap for the bumping after finding the Gerstner position?
     heightmap_colour = sampleHeightmap(position);
 
+    position = vec4(computeGerstnerSurfacePosition(position.xz, waveAnimationTimeInSeconds), 1.0f);
+
     // displace this grid vertex along the y-axis based on the height data
-    position.y = computeYPosition(heightmap_colour);
+    position.y += computeVerticalBounceWaveDeltaY(heightmap_colour);
 
     // output final vertex position in clip-space
     gl_Position = viewProjection * position;
@@ -87,15 +125,25 @@ void main() {
     //      maybe you could render the positions to a texture and then sample the neighbours, but that is overly complicated and may even be slower
     // compute four adjacent vertex positions...
     vec4 pos_minus_du = computeInterpolatedGridPosition(uv - vec2(du, 0.0f));
-    pos_minus_du.y = computeYPosition(sampleHeightmap(pos_minus_du));
+    float pos_minus_du_dy = computeVerticalBounceWaveDeltaY(sampleHeightmap(pos_minus_du));
     vec4 pos_plus_du = computeInterpolatedGridPosition(uv + vec2(du, 0.0f));
-    pos_plus_du.y = computeYPosition(sampleHeightmap(pos_plus_du));
+    float pos_plus_du_dy = computeVerticalBounceWaveDeltaY(sampleHeightmap(pos_plus_du));
     vec4 pos_minus_dv = computeInterpolatedGridPosition(uv - vec2(0.0f, dv));
-    pos_minus_dv.y = computeYPosition(sampleHeightmap(pos_minus_dv));
+    float pos_minus_dv_dy = computeVerticalBounceWaveDeltaY(sampleHeightmap(pos_minus_dv));
     vec4 pos_plus_dv = computeInterpolatedGridPosition(uv + vec2(0.0f, dv));
-    pos_plus_dv.y = computeYPosition(sampleHeightmap(pos_plus_dv));
+    float pos_plus_dv_dy = computeVerticalBounceWaveDeltaY(sampleHeightmap(pos_plus_dv));
 
-    //NOTE: since the projector is currently always above the water, this original normal will always be pointing upwards (+y)
+    pos_minus_du = vec4(computeGerstnerSurfacePosition(pos_minus_du.xz, waveAnimationTimeInSeconds), 1.0f);
+    pos_minus_du.y += pos_minus_du_dy;
+    pos_plus_du = vec4(computeGerstnerSurfacePosition(pos_plus_du.xz, waveAnimationTimeInSeconds), 1.0f);
+    pos_plus_du.y += pos_plus_du_dy;
+    pos_minus_dv = vec4(computeGerstnerSurfacePosition(pos_minus_dv.xz, waveAnimationTimeInSeconds), 1.0f);
+    pos_minus_dv.y += pos_minus_dv_dy;
+    pos_plus_dv = vec4(computeGerstnerSurfacePosition(pos_plus_dv.xz, waveAnimationTimeInSeconds), 1.0f);
+    pos_plus_dv.y += pos_plus_dv_dy;
+
+    //NOTE: since the projector is currently always above the water and our waves have no y-overlaps, this original normal will always be pointing upwards (+y)
+    //TODO: probably check this assumption to be safe
     normal = normalize(cross((pos_plus_du - pos_minus_du).xyz, (pos_plus_dv - pos_minus_dv).xyz));
     // flip the normal when the camera is underwater...
     if (dot(normal, viewVec) < 0.0f) normal *= -1;

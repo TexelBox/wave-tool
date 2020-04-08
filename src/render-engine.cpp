@@ -1,6 +1,7 @@
 #include "render-engine.h"
 
 #include <array>
+#include <string>
 #include <vector>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -10,6 +11,16 @@ namespace wave_tool {
     RenderEngine::RenderEngine(GLFWwindow *window) {
         int width, height;
         glfwGetWindowSize(window, &width, &height);
+
+        // hard-coded defaults
+        // smooth...
+        //gerstnerWaves.at(0) = std::make_shared<geometry::GerstnerWave>(5.0f, 0.01f, 0.2f, 0.0f, glm::vec2(1.0f, 0.0f));
+        //gerstnerWaves.at(1) = std::make_shared<geometry::GerstnerWave>(5.0f, 0.05f, 1.0f, 0.0f, glm::vec2(0.0f, 1.0f));
+        //gerstnerWaves.at(2) = std::make_shared<geometry::GerstnerWave>(5.0f, 0.01f, 0.2f, 0.0f, glm::normalize(glm::vec2(1.0f, 1.0f)));
+
+        // sharper...
+        gerstnerWaves.at(0) = std::make_shared<geometry::GerstnerWave>(3.0f, 0.1f, 2.0f, 1.0f, glm::vec2(1.0f, 0.0f));
+        gerstnerWaves.at(1) = std::make_shared<geometry::GerstnerWave>(5.0f, 0.1f, 0.2f, 0.0f, glm::normalize(glm::vec2(1.0f, 1.0f)));
 
         //NOTE: near distance must be small enough to not conflict with skybox size
         m_camera = std::make_shared<Camera>(72.0f, (float)width / height, 0.1f, 5000.0f, glm::vec3(0.0f, 1000.0f, 1000.0f));
@@ -49,6 +60,8 @@ namespace wave_tool {
         glm::vec3 const sunPosition{glm::cos(timeThetaInRadians), glm::sin(timeThetaInRadians), 0.0f};
 
         float const oneMinusCloudProportion = 1.0f - cloudProportion;
+
+        float const verticalBounceWavePhaseShift = verticalBounceWavePhase * glm::two_pi<float>();
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_BLEND);
@@ -192,12 +205,12 @@ namespace wave_tool {
             // reference: https://fileadmin.cs.lth.se/graphics/theses/projects/projgrid/
             //NOTE: this code closely follows the algorithm laid out by the demo at the above reference
 
-            //TODO: have a UI slider for this
-            float const WAVE_AMPLITUDE = 5.0f;
-            //float const WAVE_AMPLITUDE = 0.0f;
-            geometry::Plane const upperPlane{0.0f, 1.0f, 0.0f, WAVE_AMPLITUDE};
+            // the displaceable volume is defined by the maximum possible amplitude of all the wave summations
+            float const DISPLACEABLE_AMPLITUDE = geometry::GerstnerWave::TotalAmplitude() + verticalBounceWaveAmplitude;
+
+            geometry::Plane const upperPlane{0.0f, 1.0f, 0.0f, DISPLACEABLE_AMPLITUDE};
             geometry::Plane const basePlane{0.0f, 1.0f, 0.0f, 0.0f};
-            geometry::Plane const lowerPlane{0.0f, 1.0f, 0.0f, -WAVE_AMPLITUDE};
+            geometry::Plane const lowerPlane{0.0f, 1.0f, 0.0f, -DISPLACEABLE_AMPLITUDE};
 
             // reference: https://gamedev.stackexchange.com/questions/29999/how-do-i-create-a-bounding-frustum-from-a-view-projection-matrix
             // reference: https://stackoverflow.com/questions/7692988/opengl-math-projecting-screen-space-to-world-space-coords
@@ -211,6 +224,15 @@ namespace wave_tool {
                                                          glm::vec4{1.0f, -1.0f, 1.0f, 1.0f},    // [5] - (rbf) - right / bottom / far
                                                          glm::vec4{1.0f, 1.0f, -1.0f, 1.0f},    // [6] - (rtn) - right / top / near
                                                          glm::vec4{1.0f, 1.0f, 1.0f, 1.0f}};    // [7] - (rtf) - right / top / far
+
+            // scale XY-NDC to account for Gerstner wave XZ-world displacement...
+            //TODO: dynamically set this scale based on wave settings (so that the frustum is as small as possible - reduce overdraw)
+            //TODO: also scale the grid resolution so it stays roughly the same, so that it doesnt change based on these settings
+            float const SAFETY_PADDING_SCALAR = 1.2f;
+            for (unsigned int i = 0; i < frustumCornerPoints.size(); ++i) {
+                frustumCornerPoints.at(i).x *= SAFETY_PADDING_SCALAR;
+                frustumCornerPoints.at(i).y *= SAFETY_PADDING_SCALAR;
+            }
 
             // transform into world-space...
             for (unsigned int i = 0; i < frustumCornerPoints.size(); ++i) {
@@ -289,7 +311,7 @@ namespace wave_tool {
                 bool const isUnderwater{cameraDistanceFromBasePlane < 0.0f};
                 //TODO: make this a UI property
                 float const PROJECTOR_ELEVATION_FROM_CAMERA = 7.0f;
-                float const MINIMUM_PROJECTOR_DISTANCE_FROM_BASE_PLANE{WAVE_AMPLITUDE + PROJECTOR_ELEVATION_FROM_CAMERA};
+                float const MINIMUM_PROJECTOR_DISTANCE_FROM_BASE_PLANE{DISPLACEABLE_AMPLITUDE + PROJECTOR_ELEVATION_FROM_CAMERA};
 
                 // translate the y-position of the projector, so that it lies outside the displaceable volume (with some extra elevation padding)
                 if (cameraDistanceFromBasePlane < MINIMUM_PROJECTOR_DISTANCE_FROM_BASE_PLANE) {
@@ -439,6 +461,25 @@ namespace wave_tool {
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "bottomLeftGridPointInWorld"), 1, glm::value_ptr(bottomLeftGridPointInWorld));
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "bottomRightGridPointInWorld"), 1, glm::value_ptr(bottomRightGridPointInWorld));
                 glUniform3fv(glGetUniformLocation(waterGridProgram, "cameraPosition"), 1, glm::value_ptr(m_camera->getPosition()));
+
+                // reference: https://developer.nvidia.com/gpugems/gpugems/part-i-natural-effects/chapter-1-effective-water-simulation-physical-models
+                // reference: https://github.com/CaffeineViking/osgw/blob/master/share/shaders/gerstner.glsl
+                glUniform1ui(glGetUniformLocation(waterGridProgram, "gerstnerWaveCount"), geometry::GerstnerWave::Count());
+                for (unsigned int i = 0; i < gerstnerWaves.size(); ++i) {
+                    std::shared_ptr<geometry::GerstnerWave const> gerstnerWave{gerstnerWaves.at(i)};
+                    if (nullptr == gerstnerWave) continue;
+
+                    //TODO: handle div by zero
+                    float const steepness_Q_i{gerstnerWave->steepness_Q / (gerstnerWave->frequency_w * gerstnerWave->amplitude_A * geometry::GerstnerWave::Count())};
+                    std::string const prefixStr{"gerstnerWaves[" + std::to_string(i) + "]."};
+
+                    glUniform1f(glGetUniformLocation(waterGridProgram, std::string{prefixStr + "amplitude_A"}.c_str()), gerstnerWave->amplitude_A);
+                    glUniform1f(glGetUniformLocation(waterGridProgram, std::string{prefixStr + "frequency_w"}.c_str()), gerstnerWave->frequency_w);
+                    glUniform1f(glGetUniformLocation(waterGridProgram, std::string{prefixStr + "phaseConstant_phi"}.c_str()), gerstnerWave->phaseConstant_phi);
+                    glUniform1f(glGetUniformLocation(waterGridProgram, std::string{prefixStr + "steepness_Q_i"}.c_str()), steepness_Q_i);
+                    glUniform2fv(glGetUniformLocation(waterGridProgram, std::string{prefixStr + "xzDirection_D"}.c_str()), 1, glm::value_ptr(gerstnerWave->xzDirection_D));
+                }
+
                 glUniform1ui(glGetUniformLocation(waterGridProgram, "gridLength"), GRID_LENGTH);
                 Texture::bind2DTexture(waterGridProgram, waterGrid->textureID, "heightmap");
 
@@ -453,8 +494,10 @@ namespace wave_tool {
 
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "topLeftGridPointInWorld"), 1, glm::value_ptr(topLeftGridPointInWorld));
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "topRightGridPointInWorld"), 1, glm::value_ptr(topRightGridPointInWorld));
+                glUniform1f(glGetUniformLocation(waterGridProgram, "verticalBounceWaveAmplitude"), verticalBounceWaveAmplitude);
+                glUniform1f(glGetUniformLocation(waterGridProgram, "verticalBounceWavePhaseShift"), verticalBounceWavePhaseShift);
                 glUniformMatrix4fv(glGetUniformLocation(waterGridProgram, "viewProjection"), 1, GL_FALSE, glm::value_ptr(viewProjection));
-                glUniform1f(glGetUniformLocation(waterGridProgram, "waveAmplitude"), WAVE_AMPLITUDE);
+                glUniform1f(glGetUniformLocation(waterGridProgram, "waveAnimationTimeInSeconds"), waveAnimationTimeInSeconds);
 
                 // draw...
                 // POINT, LINE or FILL...

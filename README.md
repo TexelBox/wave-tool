@@ -100,6 +100,7 @@ Many thanks to the contributors of the following projects! Please check them out
 ### References
 - mainly implementing features outlined by <a href="https://fileadmin.cs.lth.se/graphics/theses/projects/projgrid/projgrid-hq.pdf" target="_blank">Real-time water rendering / Introducing the projected grid concept - Claes Johanson [2004]</a>.
 - with clarification using the demo code downloaded from here <a href="https://fileadmin.cs.lth.se/graphics/theses/projects/projgrid/" target="_blank">Tech Demo</a>.
+- Gerstner Waves implemented based on <a href="https://developer.nvidia.com/gpugems/gpugems/part-i-natural-effects/chapter-1-effective-water-simulation-physical-models" target="_blank">Nvidia GPU Gems - Chapter 1. Effective Water Simulation from Physical Models</a>.
 - cloud/star skybox visuals would not be possible without the base textures generated with this amazing tool! <a href="https://github.com/wwwtyro/space-3d" target="_blank">space-3d - Quickly generate procedural 3D space scenes in your browser with WebGL</a>.
 - uses some skybox textures from <a href="https://github.com/BabylonJS/Babylon.js/tree/master/Playground/textures" target="_blank">Babylon.js</a>.
 - wave noise heightmap textures sourced from <a href="https://opengameart.org/content/seamless-looping-waves-heightmaps" target="_blank">opengameart.org - Seamless Looping Waves Heightmaps</a>.
