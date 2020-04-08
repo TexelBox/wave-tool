@@ -15,7 +15,13 @@ out vec3 V;
 out vec2 UV;
 out vec3 COLOUR;
 
+out vec3 sunPosition;
+out float viewDepth;
+
+//TODO: refactor this shader
 void main(void) {
+
+    sunPosition = lightPos;
 
     UV = uv;
 
@@ -29,6 +35,8 @@ void main(void) {
     // Transform model and put in camera space
     vec4 pCameraSpace = modelView * vec4(vertex, 1.0f);
     vec3 P = pCameraSpace.xyz;
+
+    viewDepth = length(P);
 
     // Calculate L and V vectors
     L = normalize(lightCameraSpace.xyz - P);

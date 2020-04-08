@@ -32,6 +32,7 @@ uniform float waveAnimationTimeInSeconds; // in range [0.0, inf)
 
 out vec4 heightmap_colour;
 out vec3 normal;
+out float viewDepth;
 out vec3 viewVec;
 
 // reference: https://developer.nvidia.com/gpugems/gpugems/part-i-natural-effects/chapter-1-effective-water-simulation-physical-models
@@ -117,9 +118,11 @@ void main() {
     // output final vertex position in clip-space
     gl_Position = viewProjection * position;
 
-    // output view vector (V)
+    // output view depth and view vector (V)
     //NOTE: this should always be defined as a unit vector pointing away from a surface point towards the camera eye
-    viewVec = normalize(cameraPosition - position.xyz);
+    vec3 viewVecRaw = cameraPosition - position.xyz;
+    viewDepth = length(viewVecRaw);
+    viewVec = viewVecRaw / viewDepth;
 
     //TODO: if possible, it would be nice to get all the vertex positions computed and then pass them off to another shader stage to compute all the normals without redundant calculation, but this works for now
     //      maybe you could render the positions to a texture and then sample the neighbours, but that is overly complicated and may even be slower
