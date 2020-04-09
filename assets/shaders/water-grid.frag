@@ -1,7 +1,12 @@
 #version 410 core
 
 uniform samplerCube skybox;
+// the inverse light direction
 uniform vec3 sunPosition;
+// higher shininess means smaller specular highlight (sun)
+uniform float sunShininess;
+// this scalar affects how much of the sun light is added on top of the diffuse sky colour
+uniform float sunStrength;
 
 in vec4 heightmap_colour;
 in vec3 normal;
@@ -17,6 +22,10 @@ void main() {
     //NOTE: the incident vector must point towards the surface (thus, we negate the view vector that is defined as pointing away)
     vec3 R = reflect(-viewVec, normal);
     vec4 skybox_reflection_colour = vec4(texture(skybox, R).rgb, 1.0f);
+
+    //NOTE: should be same value as in skysphere shader
+    const vec3 SUN_BASE_COLOUR = vec3(1.0f, 1.0f, 1.0f);
+    vec4 sun_reflection_colour = vec4(sunStrength * SUN_BASE_COLOUR * pow(clamp(dot(R, sunPosition), 0.0f, 1.0f), sunShininess), 1.0f);
 
     // fresnel reflectance (schlick approximation...)
     // reference: https://en.wikipedia.org/wiki/Schlick%27s_approximation
@@ -38,7 +47,7 @@ void main() {
     // reference: https://fileadmin.cs.lth.se/graphics/theses/projects/projgrid/projgrid-hq.pdf
     //TODO: expand this later to combine other visual effects
     //TODO: currently there are visual artifacts when the camera is within the displaceable volume, but its minor and rarely noticeable
-    colour = (1.0f - fresnel_f_theta) * water_tint_colour + fresnel_f_theta * skybox_reflection_colour;
+    colour = (1.0f - fresnel_f_theta) * water_tint_colour + fresnel_f_theta * (skybox_reflection_colour + sun_reflection_colour);
 
     // apply hard-coded fog...
     //TODO: allow sun colouring of the fog?

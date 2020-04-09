@@ -586,6 +586,8 @@ namespace wave_tool {
                 glUniform1i(glGetUniformLocation(waterGridProgram, "skybox"), m_skyboxCubemap);
 
                 glUniform3fv(glGetUniformLocation(waterGridProgram, "sunPosition"), 1, glm::value_ptr(sunPosition));
+                glUniform1f(glGetUniformLocation(waterGridProgram, "sunShininess"), sunShininess);
+                glUniform1f(glGetUniformLocation(waterGridProgram, "sunStrength"), sunStrength);
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "topLeftGridPointInWorld"), 1, glm::value_ptr(topLeftGridPointInWorld));
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "topRightGridPointInWorld"), 1, glm::value_ptr(topRightGridPointInWorld));
                 glUniform1f(glGetUniformLocation(waterGridProgram, "verticalBounceWaveAmplitude"), verticalBounceWaveAmplitude);
