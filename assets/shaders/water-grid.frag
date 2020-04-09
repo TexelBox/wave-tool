@@ -1,7 +1,6 @@
 #version 410 core
 
 uniform samplerCube skybox;
-uniform sampler1D skysphere;
 uniform vec3 sunPosition;
 
 in vec4 heightmap_colour;
@@ -30,17 +29,10 @@ void main() {
     float fresnel_cos_theta = dot(normal, viewVec);
     float fresnel_f_theta = fresnel_f_0 + (1.0f - fresnel_f_0) * pow(1.0f - fresnel_cos_theta, 5);
 
-    //TEMPORARY...
-    //TODO: change this to something more accurate later, this is just a test for now
+    //TODO: change this to something more accurate later (like account for ocean depth?), this is just a test for now
     //TODO: should pass this colour by uniform if it is not gonna vary with different fragments
-    float a_1 = 0.25f * (sunPosition.y + 1.0f);
-    float a_2 = 1.0f - a_1;
-    //NOTE: this doesn't factor in the sun horizon darkness like the skysphere does! 
-    vec3 sunHorizonColour = mix(texture(skysphere, a_2).rgb, vec3(0.0f, 0.0f, 0.0f), 0.25f);
 
-    //NOTE: this is currently the same colour thats in the paper's demo application
-    //vec4 water_tint_colour = vec4(0.17f, 0.27f, 0.26f, 1.0f);
-    vec4 water_tint_colour = vec4(sunHorizonColour, 1.0f);
+    vec4 water_tint_colour = vec4(mix(vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 0.341f, 0.482f), clamp(sunPosition.y, 0.0f, 1.0f)), 1.0f);
 
     // output final fragment colour...
     // reference: https://fileadmin.cs.lth.se/graphics/theses/projects/projgrid/projgrid-hq.pdf
@@ -55,7 +47,7 @@ void main() {
     //TODO: pass this by uniform?
     vec3 fogColour = mix(vec3(0.3f, 0.3f, 0.3f), vec3(1.0f, 1.0f, 1.0f), clamp(sunPosition.y, 0.0f, 1.0f));
     // the attenuation factor (b)
-    const float FOG_DENSITY = 0.0002f;
+    const float FOG_DENSITY = 0.00015f;
     // exponential fog
     float f_fog = exp(-(viewDepth * FOG_DENSITY));
     // exponential-squared fog

@@ -579,14 +579,13 @@ namespace wave_tool {
                 glUniform1ui(glGetUniformLocation(waterGridProgram, "gridLength"), GRID_LENGTH);
                 Texture::bind2DTexture(waterGridProgram, waterGrid->textureID, "heightmap");
 
+                //TODO: refactor into own function
                 // bind texture...
                 glActiveTexture(GL_TEXTURE0 + m_skyboxCubemap);
                 glBindTexture(GL_TEXTURE_CUBE_MAP, m_skyboxCubemap);
                 glUniform1i(glGetUniformLocation(waterGridProgram, "skybox"), m_skyboxCubemap);
 
-                Texture::bind1DTexture(waterGridProgram, skysphere->textureID, "skysphere");
                 glUniform3fv(glGetUniformLocation(waterGridProgram, "sunPosition"), 1, glm::value_ptr(sunPosition));
-
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "topLeftGridPointInWorld"), 1, glm::value_ptr(topLeftGridPointInWorld));
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "topRightGridPointInWorld"), 1, glm::value_ptr(topRightGridPointInWorld));
                 glUniform1f(glGetUniformLocation(waterGridProgram, "verticalBounceWaveAmplitude"), verticalBounceWaveAmplitude);
@@ -598,8 +597,6 @@ namespace wave_tool {
                 // POINT, LINE or FILL...
                 glPolygonMode(GL_FRONT_AND_BACK, waterGrid->m_polygonMode);
                 glDrawElements(waterGrid->m_primitiveMode, waterGrid->drawFaces.size(), GL_UNSIGNED_INT, (void*)0);
-
-                Texture::unbind1DTexture();
 
                 // unbind texture...
                 glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
