@@ -138,6 +138,39 @@ namespace wave_tool {
 
     class RenderEngine {
         public:
+            // setup the camera data needed for each cubemap side with the same indexing as the internal OpenGL enums
+            // reminder...
+            /*
+            enum order (incremented by 1)
+            GL_TEXTURE_CUBE_MAP_POSITIVE_X
+            GL_TEXTURE_CUBE_MAP_NEGATIVE_X
+            GL_TEXTURE_CUBE_MAP_POSITIVE_Y
+            GL_TEXTURE_CUBE_MAP_NEGATIVE_Y
+            GL_TEXTURE_CUBE_MAP_POSITIVE_Z
+            GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
+            */
+            inline static glm::vec3 const CUBEMAP_CAMERA_EYE_POSITION{0.0f, 0.0f, 0.0f};
+            //matches the skybox texture length
+            static GLsizei const CUBEMAP_LENGTH{2048};
+            // FOV must be 90 degrees
+            // aspect must be 1.0 for cube
+            // near clip distance of 0.1 is standard
+            // far clip distance of 1.8 (must be greater than sqrt(3) ~= 1.73 for a unit cube)
+            inline static glm::mat4 const CUBEMAP_PROJECTION_MAT{glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 1.8f)};
+            //NOTE: I had to flip the up vectors to fix skybox mirroring. I don't know if this just obscured an error somewhere else?
+            inline static std::array<glm::mat4, 6> const CUBEMAP_VIEW_NO_TRANSLATION_MATS{glm::mat3{glm::lookAt(CUBEMAP_CAMERA_EYE_POSITION, glm::vec3{1.0f, 0.0f, 0.0f}, glm::vec3{0.0f, -1.0f, 0.0f})},
+                                                                                          glm::mat3{glm::lookAt(CUBEMAP_CAMERA_EYE_POSITION, glm::vec3{-1.0f, 0.0f, 0.0f}, glm::vec3{0.0f, -1.0f, 0.0f})},
+                                                                                          glm::mat3{glm::lookAt(CUBEMAP_CAMERA_EYE_POSITION, glm::vec3{0.0f, 1.0f, 0.0f}, glm::vec3{0.0f, 0.0f, 1.0f})},
+                                                                                          glm::mat3{glm::lookAt(CUBEMAP_CAMERA_EYE_POSITION, glm::vec3{0.0f, -1.0f, 0.0f}, glm::vec3{0.0f, 0.0f, -1.0f})},
+                                                                                          glm::mat3{glm::lookAt(CUBEMAP_CAMERA_EYE_POSITION, glm::vec3{0.0f, 0.0f, 1.0f}, glm::vec3{0.0f, -1.0f, 0.0f})},
+                                                                                          glm::mat3{glm::lookAt(CUBEMAP_CAMERA_EYE_POSITION, glm::vec3{0.0f, 0.0f, -1.0f}, glm::vec3{0.0f, -1.0f, 0.0f})}};
+            inline static std::array<glm::mat4, 6> const CUBEMAP_VP_NO_TRANSLATION_MATS{CUBEMAP_PROJECTION_MAT * CUBEMAP_VIEW_NO_TRANSLATION_MATS.at(0),
+                                                                                        CUBEMAP_PROJECTION_MAT * CUBEMAP_VIEW_NO_TRANSLATION_MATS.at(1),
+                                                                                        CUBEMAP_PROJECTION_MAT * CUBEMAP_VIEW_NO_TRANSLATION_MATS.at(2),
+                                                                                        CUBEMAP_PROJECTION_MAT * CUBEMAP_VIEW_NO_TRANSLATION_MATS.at(3),
+                                                                                        CUBEMAP_PROJECTION_MAT * CUBEMAP_VIEW_NO_TRANSLATION_MATS.at(4),
+                                                                                        CUBEMAP_PROJECTION_MAT * CUBEMAP_VIEW_NO_TRANSLATION_MATS.at(5)};
+
             //TODO: refactor these UI params out into a struct
             float animationSpeedTimeOfDayInSecondsPerHour = 1.0f; // in range [0.0, inf)
             float animationSpeedVerticalBounceWavePhasePeriodInSeconds = 3.0f; // in range [0.0, inf)
@@ -156,6 +189,7 @@ namespace wave_tool {
             std::array<std::shared_ptr<geometry::GerstnerWave>, geometry::GerstnerWave::MAX_COUNT> gerstnerWaves;
 
             RenderEngine(GLFWwindow *window);
+            ~RenderEngine();
 
             std::shared_ptr<Camera> getCamera() const;
 
@@ -176,6 +210,7 @@ namespace wave_tool {
 
             GLuint skyboxCloudsProgram;
             GLuint skyboxStarsProgram;
+            GLuint skyboxTrivialProgram;
             GLuint skysphereProgram;
             GLuint trivialProgram;
             GLuint mainProgram;
@@ -183,6 +218,11 @@ namespace wave_tool {
             GLuint waterGridProgram;
 
             //glm::vec3 lightPos;
+
+            GLuint m_skyboxCubemap{0};
+            GLuint m_skyboxFBO{0};
+            int m_windowHeight{0};
+            int m_windowWidth{0};
     };
 }
 

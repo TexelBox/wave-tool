@@ -334,12 +334,12 @@ namespace wave_tool {
         // this will hold the skybox geometry (cube) and star skybox cubemap
         m_skyboxStars = ObjectLoader::createTriMeshObject("../../assets/models/imports/cube.obj", true, true);
         if (nullptr != m_skyboxStars) {
-            m_skyboxStars->textureID = m_renderEngine->loadCubemap({"../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-4096/right.png",
-                                                                    "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-4096/left.png",
-                                                                    "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-4096/top.png",
-                                                                    "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-4096/bottom.png",
-                                                                    "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-4096/front.png",
-                                                                    "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-4096/back.png"});
+            m_skyboxStars->textureID = m_renderEngine->loadCubemap({"../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-2048/right.png",
+                                                                    "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-2048/left.png",
+                                                                    "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-2048/top.png",
+                                                                    "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-2048/bottom.png",
+                                                                    "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-2048/front.png",
+                                                                    "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-2048/back.png"});
 
             // if there was an error
             // fallback#1 (use debug skybox) (if this fails too for some reason, then there won't be a skybox)
@@ -366,12 +366,12 @@ namespace wave_tool {
         // this will hold the skybox geometry (cube) and cloud skybox cubemap
         m_skyboxClouds = ObjectLoader::createTriMeshObject("../../assets/models/imports/cube.obj", true, true);
         if (nullptr != m_skyboxClouds) {
-            m_skyboxClouds->textureID = m_renderEngine->loadCubemap({"../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-4096/right.png",
-                                                                     "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-4096/left.png",
-                                                                     "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-4096/top.png",
-                                                                     "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-4096/bottom.png",
-                                                                     "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-4096/front.png",
-                                                                     "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-4096/back.png"});
+            m_skyboxClouds->textureID = m_renderEngine->loadCubemap({"../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-2048/right.png",
+                                                                     "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-2048/left.png",
+                                                                     "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-2048/top.png",
+                                                                     "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-2048/bottom.png",
+                                                                     "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-2048/front.png",
+                                                                     "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-2048/back.png"});
             // if there was an error
             // fallback#1 (use debug skybox) (if this fails too for some reason, then there won't be a skybox)
             if (0 == m_skyboxClouds->textureID) m_skyboxClouds->textureID = m_renderEngine->loadCubemap({"../../assets/textures/skyboxes/debug/_px.jpg",

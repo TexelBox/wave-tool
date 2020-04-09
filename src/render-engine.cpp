@@ -9,8 +9,7 @@
 
 namespace wave_tool {
     RenderEngine::RenderEngine(GLFWwindow *window) {
-        int width, height;
-        glfwGetWindowSize(window, &width, &height);
+        glfwGetWindowSize(window, &m_windowWidth, &m_windowHeight);
 
         // hard-coded defaults
         // smooth...
@@ -23,10 +22,11 @@ namespace wave_tool {
         gerstnerWaves.at(1) = std::make_shared<geometry::GerstnerWave>(5.0f, 0.1f, 0.2f, 0.0f, glm::normalize(glm::vec2(1.0f, 1.0f)));
 
         //NOTE: near distance must be small enough to not conflict with skybox size
-        m_camera = std::make_shared<Camera>(72.0f, (float)width / height, 0.1f, 5000.0f, glm::vec3(0.0f, 1000.0f, 1000.0f));
+        m_camera = std::make_shared<Camera>(72.0f, (float)m_windowWidth / m_windowHeight, 0.1f, 5000.0f, glm::vec3(0.0f, 1000.0f, 1000.0f));
 
         skyboxCloudsProgram = ShaderTools::compileShaders("../../assets/shaders/skybox-clouds.vert", "../../assets/shaders/skybox-clouds.frag");
         skyboxStarsProgram = ShaderTools::compileShaders("../../assets/shaders/skybox-stars.vert", "../../assets/shaders/skybox-stars.frag");
+        skyboxTrivialProgram = ShaderTools::compileShaders("../../assets/shaders/skybox-trivial.vert", "../../assets/shaders/skybox-trivial.frag");
         skysphereProgram = ShaderTools::compileShaders("../../assets/shaders/skysphere.vert", "../../assets/shaders/skysphere.frag");
         trivialProgram = ShaderTools::compileShaders("../../assets/shaders/trivial.vert", "../../assets/shaders/trivial.frag");
         mainProgram = ShaderTools::compileShaders("../../assets/shaders/main.vert", "../../assets/shaders/main.frag");
@@ -41,6 +41,46 @@ namespace wave_tool {
         glEnable(GL_LINE_SMOOTH);
         glPointSize(30.0f);
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+
+        // init stuff for dynamic skybox texture updating...
+        // reference: https://www.youtube.com/watch?v=21UsMuFTN0k
+        // reference: https://www.youtube.com/watch?v=lW_iqrtJORc
+        glGenFramebuffers(1, &m_skyboxFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, m_skyboxFBO);
+        // attach colour buffer to FBO
+        glDrawBuffer(GL_COLOR_ATTACHMENT0);
+        // unbind / reset to default screen framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        //TODO: refactor this to own function, along with part in loadCubemap()
+        glGenTextures(1, &m_skyboxCubemap);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, m_skyboxCubemap);
+        // set options on currently bound texture object...
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        /*
+        enum order (incremented by 1)
+        GL_TEXTURE_CUBE_MAP_POSITIVE_X
+        GL_TEXTURE_CUBE_MAP_NEGATIVE_X
+        GL_TEXTURE_CUBE_MAP_POSITIVE_Y
+        GL_TEXTURE_CUBE_MAP_NEGATIVE_Y
+        GL_TEXTURE_CUBE_MAP_POSITIVE_Z
+        GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
+        */
+        for (unsigned int i = 0; i < 6; ++i) {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, CUBEMAP_LENGTH, CUBEMAP_LENGTH, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr); // allocate empty chunk in VRAM
+        }
+        // unbind
+        glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    }
+
+    RenderEngine::~RenderEngine() {
+        glDeleteTextures(1, &m_skyboxCubemap);
+        glDeleteFramebuffers(1, &m_skyboxFBO);
     }
 
     std::shared_ptr<Camera> RenderEngine::getCamera() const {
@@ -50,8 +90,10 @@ namespace wave_tool {
     // Called to render provided objects under view matrix
     void RenderEngine::render(std::shared_ptr<const MeshObject> skyboxStars, std::shared_ptr<const MeshObject> skysphere, std::shared_ptr<const MeshObject> skyboxClouds, std::shared_ptr<const MeshObject> waterGrid, std::vector<std::shared_ptr<MeshObject>> const& objects) {
         glm::mat4 const view = m_camera->getViewMat();
+        glm::mat4 const viewNoTranslation{glm::mat3{view}};
         glm::mat4 const projection = m_camera->getProjectionMat();
         glm::mat4 const viewProjection = projection * view;
+        glm::mat4 const VPNoTranslation{projection * viewNoTranslation};
         glm::mat4 const inverseViewProjection = glm::inverse(viewProjection);
 
         // compute sun position...
@@ -63,106 +105,160 @@ namespace wave_tool {
 
         float const verticalBounceWavePhaseShift = verticalBounceWavePhase * glm::two_pi<float>();
 
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        // render skybox (star layer) on top of clear colour...
+        ///////////////////////////////////////////////////
+        // dynamic skybox rendering (render 6 faces of cubemap to textures)...
+        // bind FBO (switch to render to textures)
+        glBindFramebuffer(GL_FRAMEBUFFER, m_skyboxFBO);
+
+        //TODO: see if this is even needed
+        // disable depth writing to draw everything in layers (NOTE: the FBO doesn't have a depth buffer)
+        glDepthMask(GL_FALSE);
+        // set a square viewport
+        glViewport(0, 0, CUBEMAP_LENGTH, CUBEMAP_LENGTH);
+
+        //TODO: if I ever get around to allowing exporting of the skybox, I might have to flip the image data since we are on the inside
+
+        // render each side of skybox to texture
+        //TODO: should probably only set the uniforms once
+        for (unsigned int i = 0; i < 6; ++i) {
+            // attach the next cube map face texture as the color attachment to render colours to
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_skyboxCubemap, 0);
+
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            // now render star skybox then skysphere then cloud skybox...
+            //NOTE: in the future, I could also render more objects (like far mountains/land) on top of everything
+            //TODO: refactor this into own function
+
+            // render skybox (star layer) on top of clear colour...
+            // reference: https://learnopengl.com/Advanced-OpenGL/Cubemaps
+            // reference: http://antongerdelan.net/opengl/cubemaps.html
+            if (nullptr != skyboxStars && skyboxStars->m_isVisible) {
+                // enable star shader program
+                glUseProgram(skyboxStarsProgram);
+                // bind geometry data...
+                glBindVertexArray(skyboxStars->vao);
+
+                // set uniforms...
+                //TODO: refactor into own function
+                // bind texture...
+                glActiveTexture(GL_TEXTURE0 + skyboxStars->textureID);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxStars->textureID);
+                glUniform1i(glGetUniformLocation(skyboxStarsProgram, "skyboxStars"), skyboxStars->textureID);
+                glUniformMatrix4fv(glGetUniformLocation(skyboxStarsProgram, "VPNoTranslation"), 1, GL_FALSE, glm::value_ptr(CUBEMAP_VP_NO_TRANSLATION_MATS.at(i)));
+
+                // POINT, LINE or FILL...
+                glPolygonMode(GL_FRONT_AND_BACK, skyboxStars->m_polygonMode);
+                glDrawElements(skyboxStars->m_primitiveMode, skyboxStars->drawFaces.size(), GL_UNSIGNED_INT, (void*)0);
+
+                //TODO: refactor into own function
+                // unbind texture...
+                glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+                // unbind
+                glBindVertexArray(0);
+            }
+
+            // render skysphere on top of stars...
+            if (nullptr != skysphere && skysphere->m_isVisible) {
+                // enable skysphere shader program
+                glUseProgram(skysphereProgram);
+                // bind geometry data...
+                glBindVertexArray(skysphere->vao);
+
+                // set uniforms...
+                Texture::bind1DTexture(skysphereProgram, skysphere->textureID, "skysphere");
+                glUniform1f(glGetUniformLocation(skysphereProgram, "sunHorizonDarkness"), sunHorizonDarkness);
+                glUniform3fv(glGetUniformLocation(skysphereProgram, "sunPosition"), 1, glm::value_ptr(sunPosition));
+                glUniform1f(glGetUniformLocation(skysphereProgram, "sunShininess"), sunShininess);
+                glUniform1f(glGetUniformLocation(skysphereProgram, "sunStrength"), sunStrength);
+                glUniformMatrix4fv(glGetUniformLocation(skysphereProgram, "VPNoTranslation"), 1, GL_FALSE, glm::value_ptr(CUBEMAP_VP_NO_TRANSLATION_MATS.at(i)));
+
+                // POINT, LINE or FILL...
+                glPolygonMode(GL_FRONT_AND_BACK, skysphere->m_polygonMode);
+                glDrawElements(skysphere->m_primitiveMode, skysphere->drawFaces.size(), GL_UNSIGNED_INT, (void*)0);
+
+                Texture::unbind1DTexture();
+                // unbind
+                glBindVertexArray(0);
+            }
+
+            // render skybox (cloud layer) on top of skysphere...
+            // reference: https://learnopengl.com/Advanced-OpenGL/Cubemaps
+            // reference: http://antongerdelan.net/opengl/cubemaps.html
+            if (nullptr != skyboxClouds && skyboxClouds->m_isVisible) {
+                // enable cloud shader program
+                glUseProgram(skyboxCloudsProgram);
+                // bind geometry data...
+                glBindVertexArray(skyboxClouds->vao);
+
+                // set uniforms...
+                glUniform1f(glGetUniformLocation(skyboxCloudsProgram, "oneMinusCloudProportion"), oneMinusCloudProportion);
+                glUniform1f(glGetUniformLocation(skyboxCloudsProgram, "overcastStrength"), overcastStrength);
+                //TODO: refactor into own function
+                // bind texture...
+                glActiveTexture(GL_TEXTURE0 + skyboxClouds->textureID);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxClouds->textureID);
+                glUniform1i(glGetUniformLocation(skyboxCloudsProgram, "skyboxClouds"), skyboxClouds->textureID);
+                glUniform3fv(glGetUniformLocation(skyboxCloudsProgram, "sunPosition"), 1, glm::value_ptr(sunPosition));
+                glUniformMatrix4fv(glGetUniformLocation(skyboxCloudsProgram, "VPNoTranslation"), 1, GL_FALSE, glm::value_ptr(CUBEMAP_VP_NO_TRANSLATION_MATS.at(i)));
+
+                // POINT, LINE or FILL...
+                glPolygonMode(GL_FRONT_AND_BACK, skyboxClouds->m_polygonMode);
+                glDrawElements(skyboxClouds->m_primitiveMode, skyboxClouds->drawFaces.size(), GL_UNSIGNED_INT, (void*)0);
+
+                //TODO: refactor into own function
+                // unbind texture...
+                glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+                // unbind
+                glBindVertexArray(0);
+            }
+        }
+
+        // reset viewport back to match GLFW window
+        glViewport(0, 0, m_windowWidth, m_windowHeight);
+        // re-enable depth writing for the rest of the scene
+        glDepthMask(GL_TRUE);
+        // unbind / reset to default screen framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        ///////////////////////////////////////////////////
+
+        // now render everything else to main screen framebuffer...
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // render the combined skybox from our main camera...
+        // render combined skybox (all layers) on top of clear colour...
         // reference: https://learnopengl.com/Advanced-OpenGL/Cubemaps
         // reference: http://antongerdelan.net/opengl/cubemaps.html
-        if (nullptr != skyboxStars && skyboxStars->m_isVisible) {
-            // disable depth writing to draw skybox behind everything drawn after
-            glDepthMask(GL_FALSE);
-            // enable skybox shader
-            glUseProgram(skyboxStarsProgram);
-            glm::mat4 const viewNoTranslation = glm::mat4(glm::mat3(view));
-            glm::mat4 const VPNoTranslation = projection * viewNoTranslation;
-            // set VP matrix uniform in shader program
-            glUniformMatrix4fv(glGetUniformLocation(skyboxStarsProgram, "VPNoTranslation"), 1, GL_FALSE, glm::value_ptr(VPNoTranslation));
-            // bind geometry data...
-            glBindVertexArray(skyboxStars->vao);
+        // disable depth writing to draw the skybox in the background
+        glDepthMask(GL_FALSE);
+        // enable trivial skybox shader program
+        glUseProgram(skyboxTrivialProgram);
+        // bind geometry data...
+        //NOTE: I might as well use the star skybox geometry since I just need a cube
+        glBindVertexArray(skyboxStars->vao);
 
-            // bind texture...
-            glActiveTexture(GL_TEXTURE0 + skyboxStars->textureID);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxStars->textureID);
-            // set skyboxStars samplerCube uniform in shader program
-            glUniform1i(glGetUniformLocation(skyboxStarsProgram, "skyboxStars"), skyboxStars->textureID);
+        // set uniforms...
+        //TODO: refactor into own function
+        // bind texture...
+        glActiveTexture(GL_TEXTURE0 + m_skyboxCubemap);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, m_skyboxCubemap);
+        glUniform1i(glGetUniformLocation(skyboxTrivialProgram, "skybox"), m_skyboxCubemap);
+        glUniformMatrix4fv(glGetUniformLocation(skyboxTrivialProgram, "VPNoTranslation"), 1, GL_FALSE, glm::value_ptr(VPNoTranslation));
 
-            // POINT, LINE or FILL...
-            glPolygonMode(GL_FRONT_AND_BACK, skyboxStars->m_polygonMode);
-            glDrawElements(skyboxStars->m_primitiveMode, skyboxStars->drawFaces.size(), GL_UNSIGNED_INT, (void*)0);
-            glBindVertexArray(0); // unbind vao
-            // unbind texture...
-            glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-            // re-enable depth writing for next geometry
-            glDepthMask(GL_TRUE);
-        }
+        // POINT, LINE or FILL...
+        glPolygonMode(GL_FRONT_AND_BACK, skyboxStars->m_polygonMode);
+        glDrawElements(skyboxStars->m_primitiveMode, skyboxStars->drawFaces.size(), GL_UNSIGNED_INT, (void*)0);
 
-        // render skysphere on top of stars...
-        if (nullptr != skysphere && skysphere->m_isVisible) {
-            // disable depth writing to draw skysphere behind everything drawn after
-            glDepthMask(GL_FALSE);
-            // enable skysphere shader
-            glUseProgram(skysphereProgram);
-            glm::mat4 const viewNoTranslation = glm::mat4(glm::mat3(view));
-            glm::mat4 const VPNoTranslation = projection * viewNoTranslation;
-            // set VP matrix uniform in shader program
-            glUniformMatrix4fv(glGetUniformLocation(skysphereProgram, "VPNoTranslation"), 1, GL_FALSE, glm::value_ptr(VPNoTranslation));
-            // bind geometry data...
-            glBindVertexArray(skysphere->vao);
-
-            // bind texture...
-            Texture::bind1DTexture(skysphereProgram, skysphere->textureID, "skysphere");
-            glUniform1f(glGetUniformLocation(skysphereProgram, "sunHorizonDarkness"), sunHorizonDarkness);
-            glUniform3fv(glGetUniformLocation(skysphereProgram, "sunPosition"), 1, glm::value_ptr(sunPosition));
-            glUniform1f(glGetUniformLocation(skysphereProgram, "sunShininess"), sunShininess);
-            glUniform1f(glGetUniformLocation(skysphereProgram, "sunStrength"), sunStrength);
-
-            // POINT, LINE or FILL...
-            glPolygonMode(GL_FRONT_AND_BACK, skysphere->m_polygonMode);
-            glDrawElements(skysphere->m_primitiveMode, skysphere->drawFaces.size(), GL_UNSIGNED_INT, (void*)0);
-            glBindVertexArray(0); // unbind vao
-            // unbind texture...
-            Texture::unbind1DTexture();
-            // re-enable depth writing for next geometry
-            glDepthMask(GL_TRUE);
-        }
-
-        // render skybox (cloud layer) on top of skysphere...
-        // reference: https://learnopengl.com/Advanced-OpenGL/Cubemaps
-        // reference: http://antongerdelan.net/opengl/cubemaps.html
-        if (nullptr != skyboxClouds && skyboxClouds->m_isVisible) {
-            // disable depth writing to draw skybox behind everything drawn after
-            glDepthMask(GL_FALSE);
-            // enable skybox shader
-            glUseProgram(skyboxCloudsProgram);
-            glm::mat4 const viewNoTranslation = glm::mat4(glm::mat3(view));
-            glm::mat4 const VPNoTranslation = projection * viewNoTranslation;
-            // set VP matrix uniform in shader program
-            glUniformMatrix4fv(glGetUniformLocation(skyboxCloudsProgram, "VPNoTranslation"), 1, GL_FALSE, glm::value_ptr(VPNoTranslation));
-            // bind geometry data...
-            glBindVertexArray(skyboxClouds->vao);
-
-            glUniform1f(glGetUniformLocation(skyboxCloudsProgram, "oneMinusCloudProportion"), oneMinusCloudProportion);
-            glUniform1f(glGetUniformLocation(skyboxCloudsProgram, "overcastStrength"), overcastStrength);
-
-            // bind texture...
-            glActiveTexture(GL_TEXTURE0 + skyboxClouds->textureID);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxClouds->textureID);
-            // set skyboxClouds samplerCube uniform in shader program
-            glUniform1i(glGetUniformLocation(skyboxCloudsProgram, "skyboxClouds"), skyboxClouds->textureID);
-
-            glUniform3fv(glGetUniformLocation(skyboxCloudsProgram, "sunPosition"), 1, glm::value_ptr(sunPosition));
-
-            // POINT, LINE or FILL...
-            glPolygonMode(GL_FRONT_AND_BACK, skyboxClouds->m_polygonMode);
-            glDrawElements(skyboxClouds->m_primitiveMode, skyboxClouds->drawFaces.size(), GL_UNSIGNED_INT, (void*)0);
-            glBindVertexArray(0); // unbind vao
-            // unbind texture...
-            glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-            // re-enable depth writing for next geometry
-            glDepthMask(GL_TRUE);
-        }
+        //TODO: refactor into own function
+        // unbind texture...
+        glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+        // unbind
+        glBindVertexArray(0);
+        // re-enable depth writing for the rest of the scene
+        glDepthMask(GL_TRUE);
 
         // render other objects...
         glUseProgram(mainProgram);
@@ -756,7 +852,9 @@ namespace wave_tool {
 
     // Sets projection and viewport for new width and height
     void RenderEngine::setWindowSize(int width, int height) {
-        m_camera->setAspect((float)width / height);
-        glViewport(0, 0, width, height);
+        m_windowWidth = width;
+        m_windowHeight = height;
+        m_camera->setAspect((float)m_windowWidth / m_windowHeight);
+        glViewport(0, 0, m_windowWidth, m_windowHeight);
     }
 }
