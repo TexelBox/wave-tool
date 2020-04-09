@@ -1,7 +1,6 @@
 #version 410 core
 
-//TODO: pass in an updated cubemap that can be sampled as normal instead of this stuff
-uniform samplerCube skyboxClouds;
+uniform samplerCube skybox;
 uniform sampler1D skysphere;
 uniform vec3 sunPosition;
 
@@ -18,7 +17,7 @@ void main() {
     // both input vectors should be normalized to ensure output vector is normalized
     //NOTE: the incident vector must point towards the surface (thus, we negate the view vector that is defined as pointing away)
     vec3 R = reflect(-viewVec, normal);
-    vec4 skybox_reflection_colour = vec4(texture(skyboxClouds, R).rgb, 1.0f);
+    vec4 skybox_reflection_colour = vec4(texture(skybox, R).rgb, 1.0f);
 
     // fresnel reflectance (schlick approximation...)
     // reference: https://en.wikipedia.org/wiki/Schlick%27s_approximation

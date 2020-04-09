@@ -580,10 +580,9 @@ namespace wave_tool {
                 Texture::bind2DTexture(waterGridProgram, waterGrid->textureID, "heightmap");
 
                 // bind texture...
-                glActiveTexture(GL_TEXTURE0 + skyboxClouds->textureID);
-                glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxClouds->textureID);
-                // set skyboxClouds samplerCube uniform in shader program
-                glUniform1i(glGetUniformLocation(waterGridProgram, "skyboxClouds"), skyboxClouds->textureID);
+                glActiveTexture(GL_TEXTURE0 + m_skyboxCubemap);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, m_skyboxCubemap);
+                glUniform1i(glGetUniformLocation(waterGridProgram, "skybox"), m_skyboxCubemap);
 
                 Texture::bind1DTexture(waterGridProgram, skysphere->textureID, "skysphere");
                 glUniform3fv(glGetUniformLocation(waterGridProgram, "sunPosition"), 1, glm::value_ptr(sunPosition));
