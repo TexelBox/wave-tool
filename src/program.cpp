@@ -260,7 +260,7 @@ namespace wave_tool {
 
         m_yzPlane->m_primitiveMode = PrimitiveMode::LINES;
         m_yzPlane->m_isVisible = false;
-        m_yzPlane->shaderProgramID = m_renderEngine->getMainProgram();
+        m_yzPlane->shaderProgramID = m_renderEngine->getTrivialProgram();
         m_meshObjects.push_back(m_yzPlane);
         m_renderEngine->assignBuffers(*m_yzPlane);
 
@@ -286,7 +286,7 @@ namespace wave_tool {
 
         m_xzPlane->m_primitiveMode = PrimitiveMode::LINES;
         m_xzPlane->m_isVisible = false;
-        m_xzPlane->shaderProgramID = m_renderEngine->getMainProgram();
+        m_xzPlane->shaderProgramID = m_renderEngine->getTrivialProgram();
         m_meshObjects.push_back(m_xzPlane);
         m_renderEngine->assignBuffers(*m_xzPlane);
 
@@ -312,7 +312,7 @@ namespace wave_tool {
 
         m_xyPlane->m_primitiveMode = PrimitiveMode::LINES;
         m_xyPlane->m_isVisible = false;
-        m_xyPlane->shaderProgramID = m_renderEngine->getMainProgram();
+        m_xyPlane->shaderProgramID = m_renderEngine->getTrivialProgram();
         m_meshObjects.push_back(m_xyPlane);
         m_renderEngine->assignBuffers(*m_xyPlane);
 
