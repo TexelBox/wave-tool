@@ -18,6 +18,7 @@ namespace wave_tool {
         //NOTE: near distance must be small enough to not conflict with skybox size
         m_camera = std::make_shared<Camera>(72.0f, (float)m_windowWidth / m_windowHeight, 0.1f, 100.0f, glm::vec3(0.0f, 4.0f, 70.0f));
 
+        //TODO: assert these are not 0, or wrap them and assert non-null
         skyboxCloudsProgram = ShaderTools::compileShaders("../../assets/shaders/skybox-clouds.vert", "../../assets/shaders/skybox-clouds.frag");
         skyboxStarsProgram = ShaderTools::compileShaders("../../assets/shaders/skybox-stars.vert", "../../assets/shaders/skybox-stars.frag");
         skyboxTrivialProgram = ShaderTools::compileShaders("../../assets/shaders/skybox-trivial.vert", "../../assets/shaders/skybox-trivial.frag");
@@ -260,33 +261,56 @@ namespace wave_tool {
         glDepthMask(GL_TRUE);
 
         // render other objects...
-        glUseProgram(mainProgram);
+        //TODO: optimize by batch-drawing objects that use the same shader program, as well as removing redundant uniform setting
+        //TODO: design some sort of wrapper around shader programs that can dynamically set all uniforms properly
         for (std::shared_ptr<MeshObject const> o : objects) {
+            assert(0 != o->shaderProgramID);
+
             // don't render invisible objects...
             if (!o->m_isVisible) continue;
 
-            glBindVertexArray(o->vao);
+            if (o->shaderProgramID == mainProgram) {
+                glm::mat4 const modelView{view * o->getModel()};
 
-            Texture::bind2DTexture(mainProgram, o->textureID, std::string("image"));
+                // enable shader program...
+                glUseProgram(mainProgram);
+                // bind geometry data...
+                glBindVertexArray(o->vao);
 
-            glm::mat4 const model = o->getModel();
-            glm::mat4 const modelView = view * model;
+                // set uniforms...
+                glUniform1i(glGetUniformLocation(mainProgram, "hasNormals"), !o->normals.empty());
+                glUniform1i(glGetUniformLocation(mainProgram, "hasTexture"), o->hasTexture);
+                Texture::bind2DTexture(mainProgram, o->textureID, std::string("image"));
+                //TODO: make sure the shader works with a directional light
+                glUniform3fv(glGetUniformLocation(mainProgram, "lightPos"), 1, glm::value_ptr(sunPosition));
+                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelView"), 1, GL_FALSE, glm::value_ptr(modelView));
+                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
-            glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelView"), 1, GL_FALSE, glm::value_ptr(modelView));
-            glUniformMatrix4fv(glGetUniformLocation(mainProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-            //TODO: make sure the shader works with a directional light
-            glUniform3fv(glGetUniformLocation(mainProgram, "lightPos"), 1, glm::value_ptr(sunPosition));
+                // POINT, LINE or FILL...
+                glPolygonMode(GL_FRONT_AND_BACK, o->m_polygonMode);
+                glDrawElements(o->m_primitiveMode, o->drawFaces.size(), GL_UNSIGNED_INT, (void*)0);
 
-            glUniform1i(glGetUniformLocation(mainProgram, "hasTexture"), o->hasTexture);
-            glUniform1i(glGetUniformLocation(mainProgram, "hasNormals"), !o->normals.empty());
+                Texture::unbind2DTexture();
+                // unbind
+                glBindVertexArray(0);
+            } else if (o->shaderProgramID == trivialProgram) {
+                glm::mat4 const mvp{projection * view * o->getModel()};
 
-            // POINT, LINE or FILL...
-            glPolygonMode(GL_FRONT_AND_BACK, o->m_polygonMode);
+                // enable shader program...
+                glUseProgram(trivialProgram);
+                // bind geometry data...
+                glBindVertexArray(o->vao);
 
-            glDrawElements(o->m_primitiveMode, o->drawFaces.size(), GL_UNSIGNED_INT, (void*)0);
+                // set uniforms...
+                glUniformMatrix4fv(glGetUniformLocation(trivialProgram, "mvp"), 1, GL_FALSE, glm::value_ptr(mvp));
 
-            glBindVertexArray(0);
-            Texture::unbind2DTexture();
+                // POINT, LINE or FILL...
+                glPolygonMode(GL_FRONT_AND_BACK, o->m_polygonMode);
+                glDrawElements(o->m_primitiveMode, o->drawFaces.size(), GL_UNSIGNED_INT, (void*)0);
+
+                // unbind
+                glBindVertexArray(0);
+            } else assert(false);
         }
 
         //TODO: setup clipping and rendering for local reflections/refractions
@@ -337,13 +361,13 @@ namespace wave_tool {
             }
 
             // stores indices into frustumCornerPoints
-            // 12 edges between pairs of points 
+            // 12 edges between pairs of points
             std::array<unsigned int, 24> const FRUSTUM_EDGES{0,1,   // [0]  - lbn ---> lbf (across-edge)
                                                              0,2,   // [1]  - lbn ---> ltn (near-edge)
-                                                             0,4,   // [2]  - lbn ---> rbn (near-edge) 
+                                                             0,4,   // [2]  - lbn ---> rbn (near-edge)
                                                              1,3,   // [3]  - lbf ---> ltf (far-edge)
                                                              1,5,   // [4]  - lbf ---> rbf (far-edge)
-                                                             2,3,   // [5]  - ltn ---> ltf (across-edge) 
+                                                             2,3,   // [5]  - ltn ---> ltf (across-edge)
                                                              2,6,   // [6]  - ltn ---> rtn (near-edge)
                                                              3,7,   // [7]  - ltf ---> rtf (far-edge)
                                                              4,5,   // [8]  - rbn ---> rbf (across-edge)
