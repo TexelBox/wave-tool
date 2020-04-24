@@ -24,11 +24,7 @@ namespace wave_tool {
         skysphereProgram = ShaderTools::compileShaders("../../assets/shaders/skysphere.vert", "../../assets/shaders/skysphere.frag");
         trivialProgram = ShaderTools::compileShaders("../../assets/shaders/trivial.vert", "../../assets/shaders/trivial.frag");
         mainProgram = ShaderTools::compileShaders("../../assets/shaders/main.vert", "../../assets/shaders/main.frag");
-        //lightProgram = ShaderTools::compileShaders("../assets/shaders/light.vert", "../assets/shaders/light.frag");
         waterGridProgram = ShaderTools::compileShaders("../../assets/shaders/water-grid.vert", "../../assets/shaders/water-grid.frag");
-
-        //NOTE: currently placing the light at the top of the y-axis
-        //lightPos = glm::vec3(0.0f, 500.0f, 0.0f);
 
         // Set OpenGL state
         glEnable(GL_DEPTH_TEST);
@@ -280,8 +276,6 @@ namespace wave_tool {
             glUniformMatrix4fv(glGetUniformLocation(mainProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
             //TODO: make sure the shader works with a directional light
             glUniform3fv(glGetUniformLocation(mainProgram, "lightPos"), 1, glm::value_ptr(sunPosition));
-            //glUniform3fv(glGetUniformLocation(mainProgram, "lightPos"), 1, glm::value_ptr(lightPos));
-            //glUniform3fv(glGetUniformLocation(mainProgram, "lightPos"), 1, glm::value_ptr(camera->getPosition())); // set light pos as camera pos
 
             glUniform1i(glGetUniformLocation(mainProgram, "hasTexture"), o->hasTexture);
             glUniform1i(glGetUniformLocation(mainProgram, "hasNormals"), !o->normals.empty());
@@ -614,24 +608,7 @@ namespace wave_tool {
                 glUseProgram(0); // unbind shader program
             }
         }
-
-        //renderLight();
     }
-
-/*
-    // Renders the current position of the light as a point
-    void RenderEngine::renderLight() {
-        glUseProgram(lightProgram);
-
-        glm::mat4 const view = camera->getLookAt();
-        // Uniforms
-        glUniformMatrix4fv(glGetUniformLocation(lightProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
-        glUniformMatrix4fv(glGetUniformLocation(lightProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-        glUniform3fv(glGetUniformLocation(lightProgram, "lightPos"), 1, glm::value_ptr(lightPos));
-
-        glDrawArrays(GL_POINTS, 0, 1);
-    }
-*/
 
     void RenderEngine::assignBuffers(MeshObject &object)
     {
@@ -848,11 +825,6 @@ namespace wave_tool {
 
         return textureID;
     }
-
-    // Updates lightPos by specified value
-    //void RenderEngine::updateLightPos(glm::vec3 add) {
-    //    lightPos += add;
-    //}
 
     // Sets projection and viewport for new width and height
     void RenderEngine::setWindowSize(int width, int height) {
