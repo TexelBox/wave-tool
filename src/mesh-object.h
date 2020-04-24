@@ -48,6 +48,7 @@ namespace wave_tool {
             GLuint colourBuffer;
             GLuint indexBuffer;
             GLuint textureID;
+            GLuint shaderProgramID;
 
             bool hasTexture;
 

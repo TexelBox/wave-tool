@@ -6,7 +6,7 @@ namespace wave_tool {
     MeshObject::MeshObject() :
         vao(0), vertexBuffer(0),
         normalBuffer(0), uvBuffer(0), colourBuffer(0),
-        indexBuffer(0), textureID(0), hasTexture(false) {
+        indexBuffer(0), textureID(0), shaderProgramID(0), hasTexture(false) {
 
         updateModel(); // init model matrix
     }
