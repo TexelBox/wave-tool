@@ -329,16 +329,18 @@ namespace wave_tool {
                                                                     "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-2048/front.png",
                                                                     "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-2048/back.png"});
 
-            // if there was an error
-            // fallback#1 (use debug skybox) (if this fails too for some reason, then there won't be a skybox)
-            if (0 == m_skyboxStars->textureID) m_skyboxStars->textureID = m_renderEngine->loadCubemap({"../../assets/textures/skyboxes/debug/_px.jpg",
-                                                                                                       "../../assets/textures/skyboxes/debug/_nx.jpg",
-                                                                                                       "../../assets/textures/skyboxes/debug/_py.jpg",
-                                                                                                       "../../assets/textures/skyboxes/debug/_ny.jpg",
-                                                                                                       "../../assets/textures/skyboxes/debug/_pz.jpg",
-                                                                                                       "../../assets/textures/skyboxes/debug/_nz.jpg"});
-            // fallback#2 (no skybox, you will just see the background colour)
-            if (0 == m_skyboxStars->textureID) m_skyboxStars = nullptr;
+            // fallback #1 (use debug skybox)
+            if (0 == m_skyboxStars->textureID) {
+                m_skyboxStars->textureID = m_renderEngine->loadCubemap({"../../assets/textures/skyboxes/debug/_px.jpg",
+                                                                        "../../assets/textures/skyboxes/debug/_nx.jpg",
+                                                                        "../../assets/textures/skyboxes/debug/_py.jpg",
+                                                                        "../../assets/textures/skyboxes/debug/_ny.jpg",
+                                                                        "../../assets/textures/skyboxes/debug/_pz.jpg",
+                                                                        "../../assets/textures/skyboxes/debug/_nz.jpg"});
+
+                // fallback #2 (no star skybox)
+                if (0 == m_skyboxStars->textureID) m_skyboxStars = nullptr;
+            }
             if (nullptr != m_skyboxStars) {
                 m_skyboxStars->shaderProgramID = m_renderEngine->getSkyboxStarsProgram();
                 m_renderEngine->assignBuffers(*m_skyboxStars);
@@ -349,7 +351,7 @@ namespace wave_tool {
         m_skysphere = ObjectLoader::createTriMeshObject("../../assets/models/imports/uv-sphere.obj", true, true);
         if (nullptr != m_skysphere) {
             m_skysphere->textureID = m_renderEngine->load1DTexture("../../assets/textures/sky-gradient.png");
-            // fallback (skysphere won't be renderable)
+            // fallback #1 (no skysphere)
             if (0 == m_skysphere->textureID) m_skysphere = nullptr;
             if (nullptr != m_skysphere) {
                 m_skysphere->shaderProgramID = m_renderEngine->getSkysphereProgram();
@@ -366,16 +368,19 @@ namespace wave_tool {
                                                                      "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-2048/bottom.png",
                                                                      "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-2048/front.png",
                                                                      "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-2048/back.png"});
-            // if there was an error
-            // fallback#1 (use debug skybox) (if this fails too for some reason, then there won't be a skybox)
-            if (0 == m_skyboxClouds->textureID) m_skyboxClouds->textureID = m_renderEngine->loadCubemap({"../../assets/textures/skyboxes/debug/_px.jpg",
-                                                                                                         "../../assets/textures/skyboxes/debug/_nx.jpg",
-                                                                                                         "../../assets/textures/skyboxes/debug/_py.jpg",
-                                                                                                         "../../assets/textures/skyboxes/debug/_ny.jpg",
-                                                                                                         "../../assets/textures/skyboxes/debug/_pz.jpg",
-                                                                                                         "../../assets/textures/skyboxes/debug/_nz.jpg"});
-            // fallback#2 (no skybox, you will just see the background colour)
-            if (0 == m_skyboxClouds->textureID) m_skyboxClouds = nullptr;
+
+            // fallback #1 (use debug skybox)
+            if (0 == m_skyboxClouds->textureID) {
+                m_skyboxClouds->textureID = m_renderEngine->loadCubemap({"../../assets/textures/skyboxes/debug/_px.jpg",
+                                                                         "../../assets/textures/skyboxes/debug/_nx.jpg",
+                                                                         "../../assets/textures/skyboxes/debug/_py.jpg",
+                                                                         "../../assets/textures/skyboxes/debug/_ny.jpg",
+                                                                         "../../assets/textures/skyboxes/debug/_pz.jpg",
+                                                                         "../../assets/textures/skyboxes/debug/_nz.jpg"});
+
+                // fallback #2 (no cloud skybox)
+                if (0 == m_skyboxClouds->textureID) m_skyboxClouds = nullptr;
+            }
             if (nullptr != m_skyboxClouds) {
                 m_skyboxClouds->shaderProgramID = m_renderEngine->getSkyboxCloudsProgram();
                 m_renderEngine->assignBuffers(*m_skyboxClouds);
@@ -422,7 +427,7 @@ namespace wave_tool {
         }
 
         m_waterGrid->textureID = m_renderEngine->load2DTexture("../../assets/textures/noise/waves/waves3/00.png"); //WARNING: THIS MAY HAVE TO BE CHANGED TO LOAD IN SPECIFICALLY WITH 8-bits (or may work, but should be optimized)
-        // fallback (water won't be renderable)
+        // fallback #1 (no water grid)
         if (0 == m_waterGrid->textureID) m_waterGrid = nullptr;
         if (nullptr != m_waterGrid) {
             m_waterGrid->shaderProgramID = m_renderEngine->getWaterGridProgram();
@@ -435,14 +440,20 @@ namespace wave_tool {
         if (nullptr != m_terrain) {
             if (m_terrain->hasTexture) {
                 m_terrain->textureID = m_renderEngine->load2DTexture("../../assets/textures/everest.png");
-                // if there was an error...
-                if (0 == m_terrain->textureID) m_terrain->textureID = m_renderEngine->load2DTexture("../../assets/textures/default.png"); // fallback#1 (if this fails too for some reason, then the model will most likely be black or undefined colour)
+                // fallback #1 (use default texture)
+                if (0 == m_terrain->textureID) {
+                    m_terrain->textureID = m_renderEngine->load2DTexture("../../assets/textures/default.png");
+                    // fallback #2 (no terrain)
+                    if (0 == m_terrain->textureID) m_terrain = nullptr;
+                }
             }
-            //m_terrain->generateNormals();
-            m_terrain->setScale(glm::vec3{100.0f, 100.0f, 100.0f});
-            m_terrain->shaderProgramID = m_renderEngine->getMainProgram();
-            m_meshObjects.push_back(m_terrain);
-            m_renderEngine->assignBuffers(*m_terrain);
+            if (nullptr != m_terrain) {
+                //m_terrain->generateNormals();
+                m_terrain->setScale(glm::vec3{100.0f, 100.0f, 100.0f});
+                m_terrain->shaderProgramID = m_renderEngine->getMainProgram();
+                m_meshObjects.push_back(m_terrain);
+                m_renderEngine->assignBuffers(*m_terrain);
+            }
         }
     }
 
