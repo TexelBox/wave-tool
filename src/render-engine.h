@@ -194,6 +194,13 @@ namespace wave_tool {
             ~RenderEngine();
 
             std::shared_ptr<Camera> getCamera() const;
+            inline GLuint getMainProgram() const { return mainProgram; }
+            inline GLuint getSkyboxCloudsProgram() const { return skyboxCloudsProgram; }
+            inline GLuint getSkyboxStarsProgram() const { return skyboxStarsProgram; }
+            inline GLuint getSkyboxTrivialProgram() const { return skyboxTrivialProgram; }
+            inline GLuint getSkysphereProgram() const { return skysphereProgram; }
+            inline GLuint getTrivialProgram() const { return trivialProgram; }
+            inline GLuint getWaterGridProgram() const { return waterGridProgram; }
 
             void render(std::shared_ptr<const MeshObject> skyboxStars, std::shared_ptr<const MeshObject> skysphere, std::shared_ptr<const MeshObject> skyboxClouds, std::shared_ptr<const MeshObject> waterGrid, std::vector<std::shared_ptr<MeshObject>> const& objects);
             //void renderLight();
