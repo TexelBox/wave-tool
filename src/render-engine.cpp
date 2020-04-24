@@ -75,6 +75,14 @@ namespace wave_tool {
     RenderEngine::~RenderEngine() {
         glDeleteTextures(1, &m_skyboxCubemap);
         glDeleteFramebuffers(1, &m_skyboxFBO);
+
+        glDeleteProgram(mainProgram);
+        glDeleteProgram(skyboxCloudsProgram);
+        glDeleteProgram(skyboxStarsProgram);
+        glDeleteProgram(skyboxTrivialProgram);
+        glDeleteProgram(skysphereProgram);
+        glDeleteProgram(trivialProgram);
+        glDeleteProgram(waterGridProgram);
     }
 
     std::shared_ptr<Camera> RenderEngine::getCamera() const {
