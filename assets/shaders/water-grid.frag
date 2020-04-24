@@ -56,7 +56,7 @@ void main() {
     //TODO: pass this by uniform?
     vec3 fogColour = mix(vec3(0.3f, 0.3f, 0.3f), vec3(1.0f, 1.0f, 1.0f), clamp(sunPosition.y, 0.0f, 1.0f));
     // the attenuation factor (b)
-    const float FOG_DENSITY = 0.00015f;
+    const float FOG_DENSITY = 0.015f;
     // exponential fog
     float f_fog = exp(-(viewDepth * FOG_DENSITY));
     // exponential-squared fog

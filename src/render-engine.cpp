@@ -12,17 +12,11 @@ namespace wave_tool {
         glfwGetWindowSize(window, &m_windowWidth, &m_windowHeight);
 
         // hard-coded defaults
-        // smooth...
-        //gerstnerWaves.at(0) = std::make_shared<geometry::GerstnerWave>(5.0f, 0.01f, 0.2f, 0.0f, glm::vec2(1.0f, 0.0f));
-        //gerstnerWaves.at(1) = std::make_shared<geometry::GerstnerWave>(5.0f, 0.05f, 1.0f, 0.0f, glm::vec2(0.0f, 1.0f));
-        //gerstnerWaves.at(2) = std::make_shared<geometry::GerstnerWave>(5.0f, 0.01f, 0.2f, 0.0f, glm::normalize(glm::vec2(1.0f, 1.0f)));
-
-        // sharper...
-        gerstnerWaves.at(0) = std::make_shared<geometry::GerstnerWave>(3.0f, 0.1f, 2.0f, 1.0f, glm::vec2(1.0f, 0.0f));
-        gerstnerWaves.at(1) = std::make_shared<geometry::GerstnerWave>(5.0f, 0.1f, 0.2f, 0.0f, glm::normalize(glm::vec2(1.0f, 1.0f)));
+        gerstnerWaves.at(0) = std::make_shared<geometry::GerstnerWave>(0.06f, 1.0f, 2.0f, 1.0f, glm::vec2{1.0f, 0.0f});
+        gerstnerWaves.at(1) = std::make_shared<geometry::GerstnerWave>(0.1f, 1.0f, 0.2f, 0.0f, glm::normalize(glm::vec2{1.0f, 1.0f}));
 
         //NOTE: near distance must be small enough to not conflict with skybox size
-        m_camera = std::make_shared<Camera>(72.0f, (float)m_windowWidth / m_windowHeight, 0.1f, 5000.0f, glm::vec3(0.0f, 1000.0f, 1000.0f));
+        m_camera = std::make_shared<Camera>(72.0f, (float)m_windowWidth / m_windowHeight, 0.1f, 100.0f, glm::vec3(0.0f, 4.0f, 70.0f));
 
         skyboxCloudsProgram = ShaderTools::compileShaders("../../assets/shaders/skybox-clouds.vert", "../../assets/shaders/skybox-clouds.frag");
         skyboxStarsProgram = ShaderTools::compileShaders("../../assets/shaders/skybox-stars.vert", "../../assets/shaders/skybox-stars.frag");
@@ -103,7 +97,8 @@ namespace wave_tool {
 
         float const oneMinusCloudProportion = 1.0f - cloudProportion;
 
-        float const verticalBounceWavePhaseShift = verticalBounceWavePhase * glm::two_pi<float>();
+        float const verticalBounceWavePhaseShift{verticalBounceWavePhase * glm::two_pi<float>()};
+        float const verticalBounceWaveDisplacement{verticalBounceWaveAmplitude * glm::sin(verticalBounceWavePhaseShift)};
 
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -302,7 +297,9 @@ namespace wave_tool {
             //NOTE: this code closely follows the algorithm laid out by the demo at the above reference
 
             // the displaceable volume is defined by the maximum possible amplitude of all the wave summations
-            float const DISPLACEABLE_AMPLITUDE = geometry::GerstnerWave::TotalAmplitude() + verticalBounceWaveAmplitude;
+            float const DISPLACEABLE_AMPLITUDE = geometry::GerstnerWave::TotalAmplitude() + heightmapDisplacementScale + verticalBounceWaveAmplitude;
+            //TODO: figure out if the below line causes any issues (cause it seems like it would be slightly more efficient)
+            //float const DISPLACEABLE_AMPLITUDE = geometry::GerstnerWave::TotalAmplitude() + heightmapDisplacementScale + glm::abs(verticalBounceWaveDisplacement);
 
             geometry::Plane const upperPlane{0.0f, 1.0f, 0.0f, DISPLACEABLE_AMPLITUDE};
             geometry::Plane const basePlane{0.0f, 1.0f, 0.0f, 0.0f};
@@ -324,6 +321,7 @@ namespace wave_tool {
             // scale XY-NDC to account for Gerstner wave XZ-world displacement...
             //TODO: dynamically set this scale based on wave settings (so that the frustum is as small as possible - reduce overdraw)
             //TODO: also scale the grid resolution so it stays roughly the same, so that it doesnt change based on these settings
+            //TODO: this still needs a lot of work (i.e. account for FOV / window size ???)
             float const SAFETY_PADDING_SCALAR = 1.2f;
             for (unsigned int i = 0; i < frustumCornerPoints.size(); ++i) {
                 frustumCornerPoints.at(i).x *= SAFETY_PADDING_SCALAR;
@@ -406,7 +404,7 @@ namespace wave_tool {
                 float const cameraDistanceFromBasePlane{m_camera->getPosition().y};
                 bool const isUnderwater{cameraDistanceFromBasePlane < 0.0f};
                 //TODO: make this a UI property
-                float const PROJECTOR_ELEVATION_FROM_CAMERA = 7.0f;
+                float const PROJECTOR_ELEVATION_FROM_CAMERA{1.0f};
                 float const MINIMUM_PROJECTOR_DISTANCE_FROM_BASE_PLANE{DISPLACEABLE_AMPLITUDE + PROJECTOR_ELEVATION_FROM_CAMERA};
 
                 // translate the y-position of the projector, so that it lies outside the displaceable volume (with some extra elevation padding)
@@ -439,7 +437,7 @@ namespace wave_tool {
 
                 // compute aimpoint for method 2 (horizon)...
                 //TODO: make this a UI property? auto-generate it?
-                float const FORWARD_FIXED_LENGTH{10.0f};
+                float const FORWARD_FIXED_LENGTH{1.0f};
                 glm::vec3 aimpoint_2{m_camera->getPosition() + FORWARD_FIXED_LENGTH * m_camera->getForward()};
                 // project this point onto the base plane
                 aimpoint_2.y = 0.0f;
@@ -551,8 +549,7 @@ namespace wave_tool {
                 //TODO: make this a UI setting (and probably should store this with the mesh itself since drawFaces will be closely related)
                 //TODO: might even split this into a width/height (or hres/vres) in the future for non-square grids
                 //NOTE: this should be >= 2
-                //GLuint const GRID_LENGTH = 65;
-                GLuint const GRID_LENGTH = 257;
+                GLuint const GRID_LENGTH = 513;
 
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "bottomLeftGridPointInWorld"), 1, glm::value_ptr(bottomLeftGridPointInWorld));
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "bottomRightGridPointInWorld"), 1, glm::value_ptr(bottomRightGridPointInWorld));
@@ -578,6 +575,8 @@ namespace wave_tool {
 
                 glUniform1ui(glGetUniformLocation(waterGridProgram, "gridLength"), GRID_LENGTH);
                 Texture::bind2DTexture(waterGridProgram, waterGrid->textureID, "heightmap");
+                glUniform1f(glGetUniformLocation(waterGridProgram, "heightmapDisplacementScale"), heightmapDisplacementScale);
+                glUniform1f(glGetUniformLocation(waterGridProgram, "heightmapSampleScale"), heightmapSampleScale);
 
                 //TODO: refactor into own function
                 // bind texture...
@@ -590,8 +589,7 @@ namespace wave_tool {
                 glUniform1f(glGetUniformLocation(waterGridProgram, "sunStrength"), sunStrength);
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "topLeftGridPointInWorld"), 1, glm::value_ptr(topLeftGridPointInWorld));
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "topRightGridPointInWorld"), 1, glm::value_ptr(topRightGridPointInWorld));
-                glUniform1f(glGetUniformLocation(waterGridProgram, "verticalBounceWaveAmplitude"), verticalBounceWaveAmplitude);
-                glUniform1f(glGetUniformLocation(waterGridProgram, "verticalBounceWavePhaseShift"), verticalBounceWavePhaseShift);
+                glUniform1f(glGetUniformLocation(waterGridProgram, "verticalBounceWaveDisplacement"), verticalBounceWaveDisplacement);
                 glUniformMatrix4fv(glGetUniformLocation(waterGridProgram, "viewProjection"), 1, GL_FALSE, glm::value_ptr(viewProjection));
                 glUniform1f(glGetUniformLocation(waterGridProgram, "waveAnimationTimeInSeconds"), waveAnimationTimeInSeconds);
 

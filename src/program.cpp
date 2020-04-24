@@ -8,7 +8,6 @@
 
 #include "program.h"
 
-#include <array>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -101,7 +100,7 @@ namespace wave_tool {
             ImGui::SameLine();
         }
         if (nullptr != m_yzPlane || nullptr != m_xzPlane || nullptr != m_xyPlane) {
-            ImGui::Text("   note: grid spacing is 10 units");
+            ImGui::Text("   note: grid spacing is 1 unit");
             ImGui::Separator();
         }
 
@@ -229,15 +228,16 @@ namespace wave_tool {
 
         // draw a symmetrical grid for each cartesian plane...
 
-        //NOTE: compare this to far clipping plane distance of 5000
+        //TODO: should probably change this to read from variable in render engine that could store the far clip-plane distance
+        //NOTE: compare this to far clipping plane distance of 100
         //NOTE: all these should be the same
-        int const maxX = 2500;
-        int const maxY = 2500;
-        int const maxZ = 2500;
+        int const maxX{100};
+        int const maxY{100};
+        int const maxZ{100};
         //NOTE: any change here should be reflected in the ImGui notice
-        int const deltaX = 10;
-        int const deltaY = 10;
-        int const deltaZ = 10;
+        int const deltaX{1};
+        int const deltaY{1};
+        int const deltaZ{1};
 
         // YZ-PLANE / +X-AXIS (RED)...
         m_yzPlane = std::make_shared<MeshObject>();
@@ -393,12 +393,10 @@ namespace wave_tool {
 
         // first, store indices into a length * length square grid
         //NOTE: atm, this must match the constant of the same name in render-engine.cpp, but will be changed in the future
-        //GLuint const GRID_LENGTH = 65;
-        GLuint const GRID_LENGTH = 257;
-        std::array<std::array<GLuint, GRID_LENGTH>, GRID_LENGTH> gridIndices;
+        GLuint const GRID_LENGTH = 513;
+        //NOTE: must use vector instead of array to handle larger grid lengths
         // zero-fill
-        //NOTE: may not need this
-        gridIndices.fill({});
+        std::vector<std::vector<GLuint>> gridIndices(GRID_LENGTH, std::vector<GLuint>(GRID_LENGTH, 0));
         // now fill with the proper indices in the same layout that shader expects
         // not that it really matters, but visualize it as [row][col] = [0][0] as the bottom-left element of 2D array
         GLuint counterIndex = 0;
@@ -441,7 +439,7 @@ namespace wave_tool {
                 if (0 == m_terrain->textureID) m_terrain->textureID = m_renderEngine->load2DTexture("../../assets/textures/default.png"); // fallback#1 (if this fails too for some reason, then the model will most likely be black or undefined colour)
             }
             //m_terrain->generateNormals();
-            m_terrain->setScale(glm::vec3(1000.0f, 1000.0f, 1000.0f));
+            m_terrain->setScale(glm::vec3{100.0f, 100.0f, 100.0f});
             m_meshObjects.push_back(m_terrain);
             m_renderEngine->assignBuffers(*m_terrain);
         }

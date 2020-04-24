@@ -20,7 +20,7 @@ namespace wave_tool {
         if (GLFW_PRESS == action || GLFW_REPEAT == action) { // key press, or press & hold
 
             //TODO: multiply by frameTime
-            float const CAMERA_SPEED = 10.0f;
+            float const CAMERA_SPEED{0.1f};
 
             switch (key) {
                 case GLFW_KEY_A:
