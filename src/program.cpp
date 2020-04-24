@@ -260,6 +260,7 @@ namespace wave_tool {
 
         m_yzPlane->m_primitiveMode = PrimitiveMode::LINES;
         m_yzPlane->m_isVisible = false;
+        m_yzPlane->shaderProgramID = m_renderEngine->getMainProgram();
         m_meshObjects.push_back(m_yzPlane);
         m_renderEngine->assignBuffers(*m_yzPlane);
 
@@ -285,6 +286,7 @@ namespace wave_tool {
 
         m_xzPlane->m_primitiveMode = PrimitiveMode::LINES;
         m_xzPlane->m_isVisible = false;
+        m_xzPlane->shaderProgramID = m_renderEngine->getMainProgram();
         m_meshObjects.push_back(m_xzPlane);
         m_renderEngine->assignBuffers(*m_xzPlane);
 
@@ -310,6 +312,7 @@ namespace wave_tool {
 
         m_xyPlane->m_primitiveMode = PrimitiveMode::LINES;
         m_xyPlane->m_isVisible = false;
+        m_xyPlane->shaderProgramID = m_renderEngine->getMainProgram();
         m_meshObjects.push_back(m_xyPlane);
         m_renderEngine->assignBuffers(*m_xyPlane);
 
@@ -351,7 +354,10 @@ namespace wave_tool {
                                                                                                        "../../assets/textures/skyboxes/debug/_nz.jpg"});
             // fallback#2 (no skybox, you will just see the background colour)
             if (0 == m_skyboxStars->textureID) m_skyboxStars = nullptr;
-            if (nullptr != m_skyboxStars) m_renderEngine->assignBuffers(*m_skyboxStars);
+            if (nullptr != m_skyboxStars) {
+                m_skyboxStars->shaderProgramID = m_renderEngine->getSkyboxStarsProgram();
+                m_renderEngine->assignBuffers(*m_skyboxStars);
+            }
         }
 
         // skysphere...
@@ -360,7 +366,10 @@ namespace wave_tool {
             m_skysphere->textureID = m_renderEngine->load1DTexture("../../assets/textures/sky-gradient.png");
             // fallback (skysphere won't be renderable)
             if (0 == m_skysphere->textureID) m_skysphere = nullptr;
-            if (nullptr != m_skysphere) m_renderEngine->assignBuffers(*m_skysphere);
+            if (nullptr != m_skysphere) {
+                m_skysphere->shaderProgramID = m_renderEngine->getSkysphereProgram();
+                m_renderEngine->assignBuffers(*m_skysphere);
+            }
         }
 
         // this will hold the skybox geometry (cube) and cloud skybox cubemap
@@ -382,7 +391,10 @@ namespace wave_tool {
                                                                                                          "../../assets/textures/skyboxes/debug/_nz.jpg"});
             // fallback#2 (no skybox, you will just see the background colour)
             if (0 == m_skyboxClouds->textureID) m_skyboxClouds = nullptr;
-            if (nullptr != m_skyboxClouds) m_renderEngine->assignBuffers(*m_skyboxClouds);
+            if (nullptr != m_skyboxClouds) {
+                m_skyboxClouds->shaderProgramID = m_renderEngine->getSkyboxCloudsProgram();
+                m_renderEngine->assignBuffers(*m_skyboxClouds);
+            }
         }
 
         m_waterGrid = std::make_shared<MeshObject>();
@@ -427,7 +439,10 @@ namespace wave_tool {
         m_waterGrid->textureID = m_renderEngine->load2DTexture("../../assets/textures/noise/waves/waves3/00.png"); //WARNING: THIS MAY HAVE TO BE CHANGED TO LOAD IN SPECIFICALLY WITH 8-bits (or may work, but should be optimized)
         // fallback (water won't be renderable)
         if (0 == m_waterGrid->textureID) m_waterGrid = nullptr;
-        if (nullptr != m_waterGrid) m_renderEngine->assignBuffers(*m_waterGrid);
+        if (nullptr != m_waterGrid) {
+            m_waterGrid->shaderProgramID = m_renderEngine->getWaterGridProgram();
+            m_renderEngine->assignBuffers(*m_waterGrid);
+        }
 
         //TODO: in the future, allow users to load in different terrains? (it would be nice to get program to work dynamically with whatever terrain it comes across) - probably not since finding terrain that works with my loader is hell
         // terrain...
@@ -440,6 +455,7 @@ namespace wave_tool {
             }
             //m_terrain->generateNormals();
             m_terrain->setScale(glm::vec3{100.0f, 100.0f, 100.0f});
+            m_terrain->shaderProgramID = m_renderEngine->getMainProgram();
             m_meshObjects.push_back(m_terrain);
             m_renderEngine->assignBuffers(*m_terrain);
         }
