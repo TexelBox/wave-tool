@@ -16,7 +16,7 @@ namespace wave_tool {
         gerstnerWaves.at(1) = std::make_shared<geometry::GerstnerWave>(0.1f, 1.0f, 0.2f, 0.0f, glm::normalize(glm::vec2{1.0f, 1.0f}));
 
         //NOTE: near distance must be small enough to not conflict with skybox size
-        m_camera = std::make_shared<Camera>(72.0f, (float)m_windowWidth / m_windowHeight, 0.1f, 100.0f, glm::vec3(0.0f, 4.0f, 70.0f));
+        m_camera = std::make_shared<Camera>(72.0f, (float)m_windowWidth / m_windowHeight, Z_NEAR, Z_FAR, glm::vec3(0.0f, 4.0f, 70.0f));
 
         //TODO: assert these are not 0, or wrap them and assert non-null
         skyboxCloudsProgram = ShaderTools::compileShaders("../../assets/shaders/skybox-clouds.vert", "../../assets/shaders/skybox-clouds.frag");

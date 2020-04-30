@@ -170,6 +170,9 @@ namespace wave_tool {
                                                                                         CUBEMAP_PROJECTION_MAT * CUBEMAP_VIEW_NO_TRANSLATION_MATS.at(3),
                                                                                         CUBEMAP_PROJECTION_MAT * CUBEMAP_VIEW_NO_TRANSLATION_MATS.at(4),
                                                                                         CUBEMAP_PROJECTION_MAT * CUBEMAP_VIEW_NO_TRANSLATION_MATS.at(5)};
+            //NOTE: Z_FAR > Z_NEAR > 0.0f
+            inline static float const Z_FAR{100.0f};
+            inline static float const Z_NEAR{0.1f};
 
             //TODO: refactor these UI params out into a struct
             float animationSpeedTimeOfDayInSecondsPerHour = 1.0f; // in range [0.0, inf)
