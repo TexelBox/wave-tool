@@ -159,6 +159,27 @@ namespace wave_tool {
 
         ImGui::Separator();
 
+        if (ImGui::ColorEdit4("FOG COLOUR (RGB - tint. A - density)", (float*)&m_renderEngine->fogColourFarAtNoon, ImGuiColorEditFlags_Float)) {
+            // force-clamp (handle alternate inputs)
+            m_renderEngine->fogColourFarAtNoon = glm::clamp(m_renderEngine->fogColourFarAtNoon, glm::vec4{0.0f, 0.0f, 0.0f, 0.0f}, glm::vec4{1.0f, 1.0f, 1.0f, 1.0f});
+        }
+
+        if (ImGui::SliderFloat("FOG DEPTH RADIUS (far)", &m_renderEngine->fogDepthRadiusFar, 0.0f, 1.0f)) {
+            // force-clamp (handle CTRL + LEFT_CLICK)
+            m_renderEngine->fogDepthRadiusFar = glm::clamp(m_renderEngine->fogDepthRadiusFar, 0.0f, 1.0f);
+            // shift the other bound if needed
+            m_renderEngine->fogDepthRadiusNear = glm::clamp(m_renderEngine->fogDepthRadiusNear, 0.0f, m_renderEngine->fogDepthRadiusFar);
+        }
+
+        if (ImGui::SliderFloat("FOG DEPTH RADIUS (near)", &m_renderEngine->fogDepthRadiusNear, 0.0f, 1.0f)) {
+            // force-clamp (handle CTRL + LEFT_CLICK)
+            m_renderEngine->fogDepthRadiusNear = glm::clamp(m_renderEngine->fogDepthRadiusNear, 0.0f, 1.0f);
+            // shift the other bound if needed
+            m_renderEngine->fogDepthRadiusFar = glm::clamp(m_renderEngine->fogDepthRadiusFar, m_renderEngine->fogDepthRadiusNear, 1.0f);
+        }
+
+        ImGui::Separator();
+
         if (ImGui::SliderFloat("VERTICAL-BOUNCE-WAVE PHASE", &m_renderEngine->verticalBounceWavePhase, 0.0f, 1.0f)) {
             // force-clamp (handle CTRL + LEFT_CLICK)
             m_renderEngine->verticalBounceWavePhase = glm::clamp(m_renderEngine->verticalBounceWavePhase, 0.0f, 1.0f);

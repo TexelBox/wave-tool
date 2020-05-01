@@ -107,6 +107,9 @@ namespace wave_tool {
         float const timeThetaInRadians{timeOfDayInDays * glm::two_pi<float>() - glm::half_pi<float>()};
         glm::vec3 const sunPosition{glm::cos(timeThetaInRadians), glm::sin(timeThetaInRadians), 0.0f};
 
+        // tint fades to black when sun is lower in sky
+        glm::vec4 const fogColourFarAtCurrentTime{glm::clamp(sunPosition.y, 0.0f, 1.0f) * glm::vec3{fogColourFarAtNoon}, fogColourFarAtNoon.a};
+
         float const oneMinusCloudProportion = 1.0f - cloudProportion;
 
         float const verticalBounceWavePhaseShift{verticalBounceWavePhase * glm::two_pi<float>()};
@@ -136,7 +139,7 @@ namespace wave_tool {
 
             glClear(GL_COLOR_BUFFER_BIT);
 
-            // now render star skybox then skysphere then cloud skybox...
+            // now render star skybox then skysphere then cloud skybox then fog...
             //NOTE: in the future, I could also render more objects (like far mountains/land) on top of everything
             //TODO: refactor this into own function
 
@@ -222,6 +225,27 @@ namespace wave_tool {
                 // unbind
                 glBindVertexArray(0);
             }
+
+            // render fog layer on top of clouds...
+            if (0 != m_emptyVAO) {
+                // enable screen-space-quad shader program
+                glUseProgram(screenSpaceQuadProgram);
+                // bind geometry data...
+                glBindVertexArray(m_emptyVAO);
+
+                // set uniforms...
+                glUniform1i(glGetUniformLocation(screenSpaceQuadProgram, "isTextured"), GL_FALSE);
+                Texture::bind2DTexture(screenSpaceQuadProgram, 0, "textureData"); // no texture
+                glUniform4fv(glGetUniformLocation(screenSpaceQuadProgram, "solidColour"), 1, glm::value_ptr(fogColourFarAtCurrentTime));
+
+                // POINT, LINE or FILL...
+                glPolygonMode(GL_FRONT_AND_BACK, PolygonMode::FILL);
+                glDrawArrays(PrimitiveMode::TRIANGLE_STRIP, 0, 4);
+
+                Texture::unbind2DTexture();
+                // unbind
+                glBindVertexArray(0);
+            }
         }
 
         // reset viewport back to match GLFW window
@@ -285,6 +309,9 @@ namespace wave_tool {
                 glBindVertexArray(o->vao);
 
                 // set uniforms...
+                glUniform4fv(glGetUniformLocation(mainProgram, "fogColourFarAtCurrentTime"), 1, glm::value_ptr(fogColourFarAtCurrentTime));
+                glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusFar"), fogDepthRadiusFar);
+                glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusNear"), fogDepthRadiusNear);
                 glUniform1i(glGetUniformLocation(mainProgram, "hasNormals"), !o->normals.empty());
                 glUniform1i(glGetUniformLocation(mainProgram, "hasTexture"), o->hasTexture);
                 Texture::bind2DTexture(mainProgram, o->textureID, std::string("image"));
@@ -292,6 +319,7 @@ namespace wave_tool {
                 glUniform3fv(glGetUniformLocation(mainProgram, "lightPos"), 1, glm::value_ptr(sunPosition));
                 glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelView"), 1, GL_FALSE, glm::value_ptr(modelView));
                 glUniformMatrix4fv(glGetUniformLocation(mainProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+                glUniform1f(glGetUniformLocation(mainProgram, "zFar"), Z_FAR);
 
                 // POINT, LINE or FILL...
                 glPolygonMode(GL_FRONT_AND_BACK, o->m_polygonMode);
@@ -587,6 +615,9 @@ namespace wave_tool {
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "bottomLeftGridPointInWorld"), 1, glm::value_ptr(bottomLeftGridPointInWorld));
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "bottomRightGridPointInWorld"), 1, glm::value_ptr(bottomRightGridPointInWorld));
                 glUniform3fv(glGetUniformLocation(waterGridProgram, "cameraPosition"), 1, glm::value_ptr(m_camera->getPosition()));
+                glUniform4fv(glGetUniformLocation(waterGridProgram, "fogColourFarAtCurrentTime"), 1, glm::value_ptr(fogColourFarAtCurrentTime));
+                glUniform1f(glGetUniformLocation(waterGridProgram, "fogDepthRadiusFar"), fogDepthRadiusFar);
+                glUniform1f(glGetUniformLocation(waterGridProgram, "fogDepthRadiusNear"), fogDepthRadiusNear);
 
                 // reference: https://developer.nvidia.com/gpugems/gpugems/part-i-natural-effects/chapter-1-effective-water-simulation-physical-models
                 // reference: https://github.com/CaffeineViking/osgw/blob/master/share/shaders/gerstner.glsl
@@ -625,6 +656,7 @@ namespace wave_tool {
                 glUniform1f(glGetUniformLocation(waterGridProgram, "verticalBounceWaveDisplacement"), verticalBounceWaveDisplacement);
                 glUniformMatrix4fv(glGetUniformLocation(waterGridProgram, "viewProjection"), 1, GL_FALSE, glm::value_ptr(viewProjection));
                 glUniform1f(glGetUniformLocation(waterGridProgram, "waveAnimationTimeInSeconds"), waveAnimationTimeInSeconds);
+                glUniform1f(glGetUniformLocation(waterGridProgram, "zFar"), Z_FAR);
 
                 // draw...
                 // POINT, LINE or FILL...

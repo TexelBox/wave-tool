@@ -3,6 +3,7 @@
 uniform mat4 modelView;
 uniform mat4 projection;
 uniform vec3 lightPos;
+uniform float zFar;
 
 layout (location = 0) in vec3 vertex;
 layout (location = 1) in vec3 normal;
@@ -16,7 +17,7 @@ out vec2 UV;
 out vec3 COLOUR;
 
 out vec3 sunPosition;
-out float viewDepth;
+out float viewVecDepth;
 
 //TODO: refactor this shader
 void main(void) {
@@ -36,7 +37,9 @@ void main(void) {
     vec4 pCameraSpace = modelView * vec4(vertex, 1.0f);
     vec3 P = pCameraSpace.xyz;
 
-    viewDepth = length(P);
+    float viewVecLength = length(P);
+    //TODO: clipping will probably interpolate wrong if I clamp the upper bound, so just remove this clamping when I implement the spherical clipping
+    viewVecDepth = clamp(viewVecLength / zFar, 0.0f, 1.0f);
 
     // Calculate L and V vectors
     L = normalize(lightCameraSpace.xyz - P);

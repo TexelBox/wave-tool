@@ -30,11 +30,12 @@ uniform vec4 topRightGridPointInWorld;
 uniform float verticalBounceWaveDisplacement;
 uniform mat4 viewProjection;
 uniform float waveAnimationTimeInSeconds; // in range [0.0, inf)
+uniform float zFar;
 
 out vec4 heightmap_colour;
 out vec3 normal;
-out float viewDepth;
 out vec3 viewVec;
+out float viewVecDepth;
 
 // reference: https://developer.nvidia.com/gpugems/gpugems/part-i-natural-effects/chapter-1-effective-water-simulation-physical-models
 //TODO: it seems like the direction is interpreted backwards?
@@ -119,8 +120,10 @@ void main() {
     // output view depth and view vector (V)
     //NOTE: this should always be defined as a unit vector pointing away from a surface point towards the camera eye
     vec3 viewVecRaw = cameraPosition - position.xyz;
-    viewDepth = length(viewVecRaw);
-    viewVec = viewVecRaw / viewDepth;
+    float viewVecLength = length(viewVecRaw);
+    viewVec = viewVecRaw / viewVecLength;
+    //TODO: clipping will probably interpolate wrong if I clamp the upper bound, so just remove this clamping when I implement the spherical clipping
+    viewVecDepth = clamp(viewVecLength / zFar, 0.0f, 1.0f);
 
     //TODO: refactor all these position calculations into 1 function
     //TODO: if possible, it would be nice to get all the vertex positions computed and then pass them off to another shader stage to compute all the normals without redundant calculation, but this works for now

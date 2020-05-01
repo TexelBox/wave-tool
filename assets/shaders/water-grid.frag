@@ -1,5 +1,8 @@
 #version 410 core
 
+uniform vec4 fogColourFarAtCurrentTime;
+uniform float fogDepthRadiusFar;
+uniform float fogDepthRadiusNear;
 uniform samplerCube skybox;
 // the inverse light direction
 uniform vec3 sunPosition;
@@ -10,8 +13,8 @@ uniform float sunStrength;
 
 in vec4 heightmap_colour;
 in vec3 normal;
-in float viewDepth;
 in vec3 viewVec;
+in float viewVecDepth;
 
 out vec4 colour;
 
@@ -49,20 +52,11 @@ void main() {
     //TODO: currently there are visual artifacts when the camera is within the displaceable volume, but its minor and rarely noticeable
     colour = (1.0f - fresnel_f_theta) * water_tint_colour + fresnel_f_theta * (skybox_reflection_colour + sun_reflection_colour);
 
-    // apply hard-coded fog...
-    //TODO: allow sun colouring of the fog?
-    //TODO: add UI setting for fog density
-    // reference: http://in2gpu.com/2014/07/22/create-fog-shader/
-    //TODO: pass this by uniform?
-    vec3 fogColour = mix(vec3(0.3f, 0.3f, 0.3f), vec3(1.0f, 1.0f, 1.0f), clamp(sunPosition.y, 0.0f, 1.0f));
-    // the attenuation factor (b)
-    const float FOG_DENSITY = 0.015f;
-    // exponential fog
-    float f_fog = exp(-(viewDepth * FOG_DENSITY));
-    // exponential-squared fog
-    //float f_fog = exp(-pow(viewDepth * FOG_DENSITY, 2));
-
-    colour = vec4(mix(fogColour, colour.xyz, f_fog), 1.0f);
+    //TODO: in future this will be moved out into a post-process shader program
+    // apply fog...
+    vec4 fogColour = fogColourFarAtCurrentTime;
+    fogColour.a = viewVecDepth >= fogDepthRadiusFar ? fogColour.a : viewVecDepth <= fogDepthRadiusNear ? 0.0f : fogColour.a * ((viewVecDepth - fogDepthRadiusNear) / (fogDepthRadiusFar - fogDepthRadiusNear));
+    colour = vec4(mix(colour.rgb, fogColour.rgb, fogColour.a), max(colour.a, fogColour.a));
 
     //TODO: have a UI toggle for this debug colour...
     //colour = heightmap_colour;
