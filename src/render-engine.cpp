@@ -19,6 +19,7 @@ namespace wave_tool {
         m_camera = std::make_shared<Camera>(72.0f, (float)m_windowWidth / m_windowHeight, Z_NEAR, Z_FAR, glm::vec3(0.0f, 4.0f, 70.0f));
 
         //TODO: assert these are not 0, or wrap them and assert non-null
+        screenSpaceQuadProgram = ShaderTools::compileShaders("../../assets/shaders/screen-space-quad.vert", "../../assets/shaders/screen-space-quad.frag");
         skyboxCloudsProgram = ShaderTools::compileShaders("../../assets/shaders/skybox-clouds.vert", "../../assets/shaders/skybox-clouds.frag");
         skyboxStarsProgram = ShaderTools::compileShaders("../../assets/shaders/skybox-stars.vert", "../../assets/shaders/skybox-stars.frag");
         skyboxTrivialProgram = ShaderTools::compileShaders("../../assets/shaders/skybox-trivial.vert", "../../assets/shaders/skybox-trivial.frag");
@@ -79,6 +80,7 @@ namespace wave_tool {
         glDeleteVertexArrays(1, &m_emptyVAO);
 
         glDeleteProgram(mainProgram);
+        glDeleteProgram(screenSpaceQuadProgram);
         glDeleteProgram(skyboxCloudsProgram);
         glDeleteProgram(skyboxStarsProgram);
         glDeleteProgram(skyboxTrivialProgram);

@@ -198,6 +198,7 @@ namespace wave_tool {
 
             std::shared_ptr<Camera> getCamera() const;
             inline GLuint getMainProgram() const { return mainProgram; }
+            inline GLuint getScreenSpaceQuadProgram() const { return screenSpaceQuadProgram; }
             inline GLuint getSkyboxCloudsProgram() const { return skyboxCloudsProgram; }
             inline GLuint getSkyboxStarsProgram() const { return skyboxStarsProgram; }
             inline GLuint getSkyboxTrivialProgram() const { return skyboxTrivialProgram; }
@@ -217,6 +218,7 @@ namespace wave_tool {
         private:
             std::shared_ptr<Camera> m_camera = nullptr;
 
+            GLuint screenSpaceQuadProgram;
             GLuint skyboxCloudsProgram;
             GLuint skyboxStarsProgram;
             GLuint skyboxTrivialProgram;
