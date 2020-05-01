@@ -225,6 +225,7 @@ namespace wave_tool {
             GLuint mainProgram;
             GLuint waterGridProgram;
 
+            GLuint m_emptyVAO{0};
             GLuint m_skyboxCubemap{0};
             GLuint m_skyboxFBO{0};
             int m_windowHeight{0};

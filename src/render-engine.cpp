@@ -33,6 +33,9 @@ namespace wave_tool {
         glPointSize(30.0f);
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
+        // this dummy VAO can be used for attribute-less rendering
+        glGenVertexArrays(1, &m_emptyVAO);
+
         // init stuff for dynamic skybox texture updating...
         // reference: https://www.youtube.com/watch?v=21UsMuFTN0k
         // reference: https://www.youtube.com/watch?v=lW_iqrtJORc
@@ -72,6 +75,8 @@ namespace wave_tool {
     RenderEngine::~RenderEngine() {
         glDeleteTextures(1, &m_skyboxCubemap);
         glDeleteFramebuffers(1, &m_skyboxFBO);
+
+        glDeleteVertexArrays(1, &m_emptyVAO);
 
         glDeleteProgram(mainProgram);
         glDeleteProgram(skyboxCloudsProgram);
