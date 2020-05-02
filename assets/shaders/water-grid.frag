@@ -3,6 +3,7 @@
 uniform vec4 fogColourFarAtCurrentTime;
 uniform float fogDepthRadiusFar;
 uniform float fogDepthRadiusNear;
+uniform sampler2D localReflectionsTexture2D;
 uniform samplerCube skybox;
 // the inverse light direction
 uniform vec3 sunPosition;
@@ -10,11 +11,14 @@ uniform vec3 sunPosition;
 uniform float sunShininess;
 // this scalar affects how much of the sun light is added on top of the diffuse sky colour
 uniform float sunStrength;
+uniform vec2 viewportWidthHeight;
 
 in vec4 heightmap_colour;
 in vec3 normal;
+in vec3 normalVecInViewSpaceOnlyYaw;
 in vec3 viewVec;
 in float viewVecDepth;
+in vec2 xyPositionNDCSpaceHeight0;
 
 out vec4 colour;
 
@@ -46,11 +50,35 @@ void main() {
 
     vec4 water_tint_colour = vec4(mix(vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 0.341f, 0.482f), clamp(sunPosition.y, 0.0f, 1.0f)), 1.0f);
 
+    // compute the two starting uvs, that only differ by their world-space y component (height)...
+    // convert viewport-space coords to uv-space coords
+    vec2 uvViewportSpace = gl_FragCoord.xy / viewportWidthHeight;
+    // convert ndc-space coords to uv-space coords
+    vec2 uvViewportSpaceHeight0 = (xyPositionNDCSpaceHeight0 + vec2(1.0f, 1.0f)) / 2.0f;
+
+    // compute the amount of distortion based on product of 1. empirical scalar and 2. view vector depth...
+    // the view vector depth is factored in since the surface should look flatter farther away
+    //NOTE: the distortion will automatically scale with the viewport size, since UV-space is always 0.0 to 1.0, but will span over different resolutions
+    //NOTE: this scalar must be in range [0.0, 1.0]
+    const float LOCAL_REFLECTIONS_DISTORTION_STRENGTH = 0.1f;
+    // this should already be clamped, but doing this for safety
+    float viewVecDepthClamped = clamp(viewVecDepth, 0.0f, 1.0f);
+    float localReflectionsDistortionScalar = LOCAL_REFLECTIONS_DISTORTION_STRENGTH * (1.0f - viewVecDepthClamped);
+
+    // compute the distorted uv-space coords...
+    vec2 uvLocalReflectionsYDistorted = mix(uvViewportSpace, uvViewportSpaceHeight0, localReflectionsDistortionScalar);
+    //NOTE: I negate the view-space (only yaw) xz-coords in order to get the shift direction to be proper
+    vec2 uvLocalReflectionsXZDistortion = localReflectionsDistortionScalar * -normalVecInViewSpaceOnlyYaw.xz;
+    vec2 uvLocalReflections = clamp(uvLocalReflectionsYDistorted + uvLocalReflectionsXZDistortion, vec2(0.0f, 0.0f), vec2(1.0f, 1.0f));
+
+    // finally, we can compute the local reflection colour (where an alpha of 0.0 symbolically represents no local reflection for this fragment)
+    vec4 localReflectionColour = texture(localReflectionsTexture2D, uvLocalReflections);
+
     // output final fragment colour...
     // reference: https://fileadmin.cs.lth.se/graphics/theses/projects/projgrid/projgrid-hq.pdf
     //TODO: expand this later to combine other visual effects
     //TODO: currently there are visual artifacts when the camera is within the displaceable volume, but its minor and rarely noticeable
-    colour = (1.0f - fresnel_f_theta) * water_tint_colour + fresnel_f_theta * (skybox_reflection_colour + sun_reflection_colour);
+    colour = vec4(mix(water_tint_colour.rgb, mix(skybox_reflection_colour.rgb + sun_reflection_colour.rgb, localReflectionColour.rgb, localReflectionColour.a), fresnel_f_theta), 1.0f);
 
     //TODO: in future this will be moved out into a post-process shader program
     // apply fog...

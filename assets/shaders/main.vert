@@ -1,5 +1,12 @@
 #version 410 core
 
+// default "plane" is a singularity which will cause this manual clipping test to always succeed for all vertices
+//NOTE: this symbolic value should always be passed when you want this manual clipping disabled (cause some drivers might ignore glEnable/glDisable of GL_CLIP_DISTANCEi)
+//NOTE: if you ever output a clip distance that isn't enabled, the clipping stage will just ignore the manual test
+// reference: https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/gl_ClipDistance.xhtml
+// reference: https://prideout.net/clip-planes
+uniform vec4 clipPlane0 = vec4(0.0f, 0.0f, 0.0f, 1.0f); // <A, B, C, D> where Ax + By + Cz = D
+uniform mat4 modelMat;
 uniform mat4 modelView;
 uniform mat4 projection;
 uniform vec3 lightPos;
@@ -18,6 +25,8 @@ out vec3 COLOUR;
 
 out vec3 sunPosition;
 out float viewVecDepth;
+
+out float gl_ClipDistance[1];
 
 //TODO: refactor this shader
 void main(void) {
@@ -46,6 +55,8 @@ void main(void) {
     V = normalize(-P);
 
     gl_Position = projection * pCameraSpace;
+
+    gl_ClipDistance[0] = dot(modelMat * vec4(vertex, 1.0f), clipPlane0);
 
     COLOUR = colour;
 }

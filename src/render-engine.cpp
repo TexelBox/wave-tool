@@ -71,9 +71,49 @@ namespace wave_tool {
         }
         // unbind
         glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+        // reference: https://learnopengl.com/Advanced-OpenGL/Framebuffers
+        // REUSABLE DEPTH/STENCIL RBO...
+        glGenRenderbuffers(1, &m_depth24Stencil8RBO);
+        glBindRenderbuffer(GL_RENDERBUFFER, m_depth24Stencil8RBO);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_windowWidth, m_windowHeight);
+        // unbind
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+        // LOCAL REFLECTIONS TEXTURE (2D)...
+        glGenTextures(1, &m_localReflectionsTexture2D);
+        glBindTexture(GL_TEXTURE_2D, m_localReflectionsTexture2D);
+        // set options on currently bound texture object...
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        // generate empty texture (2D)...
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_windowWidth, m_windowHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        // unbind
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        // LOCAL REFLECTIONS FBO...
+        glGenFramebuffers(1, &m_localReflectionsFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, m_localReflectionsFBO);
+        // attach colour buffer to FBO
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_localReflectionsTexture2D, 0);
+        // attach depth/stencil buffer to FBO
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_depth24Stencil8RBO);
+        // set fragment shader (location = 0) output
+        glDrawBuffer(GL_COLOR_ATTACHMENT0);
+        // check FBO setup status...
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) std::cout << "ERROR: render-engine.cpp - local reflections FBO setup failed!" << std::endl;
+        // unbind / reset to default screen framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     RenderEngine::~RenderEngine() {
+        glDeleteRenderbuffers(1, &m_depth24Stencil8RBO);
+
+        glDeleteTextures(1, &m_localReflectionsTexture2D);
+        glDeleteFramebuffers(1, &m_localReflectionsFBO);
+
         glDeleteTextures(1, &m_skyboxCubemap);
         glDeleteFramebuffers(1, &m_skyboxFBO);
 
@@ -96,6 +136,9 @@ namespace wave_tool {
     // Called to render provided objects under view matrix
     void RenderEngine::render(std::shared_ptr<const MeshObject> skyboxStars, std::shared_ptr<const MeshObject> skysphere, std::shared_ptr<const MeshObject> skyboxClouds, std::shared_ptr<const MeshObject> waterGrid, std::vector<std::shared_ptr<MeshObject>> const& objects) {
         glm::mat4 const view = m_camera->getViewMat();
+        Camera cameraOnlyYaw{*m_camera};
+        cameraOnlyYaw.setRotation(cameraOnlyYaw.getYaw(), 0.0f);
+        glm::mat4 const viewMatOnlyYaw{cameraOnlyYaw.getViewMat()};
         glm::mat4 const viewNoTranslation{glm::mat3{view}};
         glm::mat4 const projection = m_camera->getProjectionMat();
         glm::mat4 const viewProjection = projection * view;
@@ -135,6 +178,7 @@ namespace wave_tool {
         //TODO: should probably only set the uniforms once
         for (unsigned int i = 0; i < 6; ++i) {
             // attach the next cube map face texture as the color attachment to render colours to
+            //TODO: I think I can move this call into the FBO setup
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_skyboxCubemap, 0);
 
             glClear(GL_COLOR_BUFFER_BIT);
@@ -256,7 +300,90 @@ namespace wave_tool {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         ///////////////////////////////////////////////////
 
+        ///////////////////////////////////////////////////
+        // RENDER LOCAL REFLECTIONS TO TEXTURE...
+        glBindFramebuffer(GL_FRAMEBUFFER, m_localReflectionsFBO);
+
+        glEnable(GL_CLIP_DISTANCE0);
+
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+        //NOTE: this must be clockwise since we are mirroring our scene across the XZ-plane which will flip the winding
+        glFrontFace(GL_CW);
+
+        // alpha of 0.0 is used to indicate no local reflection at fragment (i.e. the skybox is here and is already handled in global reflections)
+        glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // render other objects...
+        //TODO: currently not rendering any objects using trivial shader program (cause I don't want to change those shaders), but this is fine since only the debug planes currently are shaded this way
+        //      I could create a modified trivial shader program, or switch everything to the main shader program and then just skip rendering objects flagged as DEBUG
+        //TODO: optimize by batch-drawing objects that use the same shader program, as well as removing redundant uniform setting
+        //TODO: design some sort of wrapper around shader programs that can dynamically set all uniforms properly
+
+        // in column-major order
+        // mirrors world-space position about the XZ-plane
+        glm::mat4 const LOCAL_REFLECTIONS_MATRIX{1.0f, 0.0f, 0.0f, 0.0f,
+                                                 0.0f, -1.0f, 0.0f, 0.0f,
+                                                 0.0f, 0.0f, 1.0f, 0.0f,
+                                                 0.0f, 0.0f, 0.0f, 1.0f};
+
+        // <A, B, C, D> where Ax + By + Cz = D
+        // clipping test will succeed if underneath XZ-plane
+        //TODO: see if any padding is needed to hide artifacts when grazing the surface
+        glm::vec4 const LOCAL_REFLECTIONS_CLIP_PLANE{0.0f, -1.0f, 0.0f, 0.0f};
+
+        for (std::shared_ptr<MeshObject const> o : objects) {
+            assert(0 != o->shaderProgramID);
+
+            // don't render invisible objects...
+            if (!o->m_isVisible) continue;
+
+            if (o->shaderProgramID == mainProgram) {
+                glm::mat4 const modelMat{LOCAL_REFLECTIONS_MATRIX * o->getModel()};
+                glm::mat4 const modelView{view * modelMat};
+
+                // enable shader program...
+                glUseProgram(mainProgram);
+                // bind geometry data...
+                glBindVertexArray(o->vao);
+
+                // set uniforms...
+                glUniform4fv(glGetUniformLocation(mainProgram, "clipPlane0"), 1, glm::value_ptr(LOCAL_REFLECTIONS_CLIP_PLANE));
+                glUniform4fv(glGetUniformLocation(mainProgram, "fogColourFarAtCurrentTime"), 1, glm::value_ptr(fogColourFarAtCurrentTime));
+                glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusFar"), fogDepthRadiusFar);
+                glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusNear"), fogDepthRadiusNear);
+                glUniform1i(glGetUniformLocation(mainProgram, "hasNormals"), !o->normals.empty());
+                glUniform1i(glGetUniformLocation(mainProgram, "hasTexture"), o->hasTexture);
+                Texture::bind2DTexture(mainProgram, o->textureID, std::string("image"));
+                //TODO: make sure the shader works with a directional light
+                glUniform3fv(glGetUniformLocation(mainProgram, "lightPos"), 1, glm::value_ptr(sunPosition));
+                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelMat"), 1, GL_FALSE, glm::value_ptr(modelMat));
+                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelView"), 1, GL_FALSE, glm::value_ptr(modelView));
+                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+                glUniform1f(glGetUniformLocation(mainProgram, "zFar"), Z_FAR);
+
+                // POINT, LINE or FILL...
+                glPolygonMode(GL_FRONT_AND_BACK, o->m_polygonMode);
+                glDrawElements(o->m_primitiveMode, o->drawFaces.size(), GL_UNSIGNED_INT, (void*)0);
+
+                Texture::unbind2DTexture();
+                // unbind
+                glBindVertexArray(0);
+            }
+        }
+
+        // reset
+        glFrontFace(GL_CCW);
+        glDisable(GL_CULL_FACE);
+
+        glDisable(GL_CLIP_DISTANCE0);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        ///////////////////////////////////////////////////
+
         // now render everything else to main screen framebuffer...
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // render the combined skybox from our main camera...
@@ -301,7 +428,8 @@ namespace wave_tool {
             if (!o->m_isVisible) continue;
 
             if (o->shaderProgramID == mainProgram) {
-                glm::mat4 const modelView{view * o->getModel()};
+                glm::mat4 const modelMat{o->getModel()};
+                glm::mat4 const modelView{view * modelMat};
 
                 // enable shader program...
                 glUseProgram(mainProgram);
@@ -309,6 +437,8 @@ namespace wave_tool {
                 glBindVertexArray(o->vao);
 
                 // set uniforms...
+                // pass a symbolic clip plane singularity to ensure this manual clipping test succeeds for all vertices - avoids driver bugs that ignore enable/disable state of clip distances
+                glUniform4fv(glGetUniformLocation(mainProgram, "clipPlane0"), 1, glm::value_ptr(SYMBOLIC_CLIP_PLANE_SINGULARITY));
                 glUniform4fv(glGetUniformLocation(mainProgram, "fogColourFarAtCurrentTime"), 1, glm::value_ptr(fogColourFarAtCurrentTime));
                 glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusFar"), fogDepthRadiusFar);
                 glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusNear"), fogDepthRadiusNear);
@@ -317,6 +447,7 @@ namespace wave_tool {
                 Texture::bind2DTexture(mainProgram, o->textureID, std::string("image"));
                 //TODO: make sure the shader works with a directional light
                 glUniform3fv(glGetUniformLocation(mainProgram, "lightPos"), 1, glm::value_ptr(sunPosition));
+                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelMat"), 1, GL_FALSE, glm::value_ptr(modelMat));
                 glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelView"), 1, GL_FALSE, glm::value_ptr(modelView));
                 glUniformMatrix4fv(glGetUniformLocation(mainProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
                 glUniform1f(glGetUniformLocation(mainProgram, "zFar"), Z_FAR);
@@ -347,8 +478,6 @@ namespace wave_tool {
                 glBindVertexArray(0);
             } else assert(false);
         }
-
-        //TODO: setup clipping and rendering for local reflections/refractions
 
         //NOTE: the order of drawing matters for alpha-blending
         // render water...
@@ -641,6 +770,7 @@ namespace wave_tool {
                 Texture::bind2DTexture(waterGridProgram, waterGrid->textureID, "heightmap");
                 glUniform1f(glGetUniformLocation(waterGridProgram, "heightmapDisplacementScale"), heightmapDisplacementScale);
                 glUniform1f(glGetUniformLocation(waterGridProgram, "heightmapSampleScale"), heightmapSampleScale);
+                Texture::bind2DTexture(waterGridProgram, m_localReflectionsTexture2D, "localReflectionsTexture2D");
 
                 //TODO: refactor into own function
                 // bind texture...
@@ -654,6 +784,8 @@ namespace wave_tool {
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "topLeftGridPointInWorld"), 1, glm::value_ptr(topLeftGridPointInWorld));
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "topRightGridPointInWorld"), 1, glm::value_ptr(topRightGridPointInWorld));
                 glUniform1f(glGetUniformLocation(waterGridProgram, "verticalBounceWaveDisplacement"), verticalBounceWaveDisplacement);
+                glUniformMatrix4fv(glGetUniformLocation(waterGridProgram, "viewMatOnlyYaw"), 1, GL_FALSE, glm::value_ptr(viewMatOnlyYaw));
+                glUniform2fv(glGetUniformLocation(waterGridProgram, "viewportWidthHeight"), 1, glm::value_ptr(glm::vec2{(float)m_windowWidth, (float)m_windowHeight}));
                 glUniformMatrix4fv(glGetUniformLocation(waterGridProgram, "viewProjection"), 1, GL_FALSE, glm::value_ptr(viewProjection));
                 glUniform1f(glGetUniformLocation(waterGridProgram, "waveAnimationTimeInSeconds"), waveAnimationTimeInSeconds);
                 glUniform1f(glGetUniformLocation(waterGridProgram, "zFar"), Z_FAR);
@@ -895,5 +1027,16 @@ namespace wave_tool {
         m_windowHeight = height;
         m_camera->setAspect((float)m_windowWidth / m_windowHeight);
         glViewport(0, 0, m_windowWidth, m_windowHeight);
+
+        //TODO: figure out if there are any driver bugs that require regenerating the FBO or rebinding the textures/buffers to it
+        // reference: https://stackoverflow.com/questions/44763449/updating-width-and-height-of-render-target-on-the-fly
+        // reallocate textures / buffers that must match new window dimensions...
+        glBindRenderbuffer(GL_RENDERBUFFER, m_depth24Stencil8RBO);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_windowWidth, m_windowHeight);
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+        glBindTexture(GL_TEXTURE_2D, m_localReflectionsTexture2D);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_windowWidth, m_windowHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glBindTexture(GL_TEXTURE_2D, 0);
     }
 }

@@ -170,6 +170,9 @@ namespace wave_tool {
                                                                                         CUBEMAP_PROJECTION_MAT * CUBEMAP_VIEW_NO_TRANSLATION_MATS.at(3),
                                                                                         CUBEMAP_PROJECTION_MAT * CUBEMAP_VIEW_NO_TRANSLATION_MATS.at(4),
                                                                                         CUBEMAP_PROJECTION_MAT * CUBEMAP_VIEW_NO_TRANSLATION_MATS.at(5)};
+            // use this "plane" when manual clipping is enabled and you want this clipping test to always succeed for all vertices
+            // <A, B, C, D> where Ax + By + Cz = D
+            inline static glm::vec4 const SYMBOLIC_CLIP_PLANE_SINGULARITY{0.0f, 0.0f, 0.0f, 1.0f};
             //NOTE: Z_FAR > Z_NEAR > 0.0f
             inline static float const Z_FAR{100.0f};
             inline static float const Z_NEAR{0.1f};
@@ -230,7 +233,10 @@ namespace wave_tool {
             GLuint mainProgram;
             GLuint waterGridProgram;
 
+            GLuint m_depth24Stencil8RBO{0};
             GLuint m_emptyVAO{0};
+            GLuint m_localReflectionsFBO{0};
+            GLuint m_localReflectionsTexture2D{0};
             GLuint m_skyboxCubemap{0};
             GLuint m_skyboxFBO{0};
             int m_windowHeight{0};
