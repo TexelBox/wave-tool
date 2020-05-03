@@ -592,7 +592,7 @@ namespace wave_tool {
 
         //NOTE: the order of drawing matters for alpha-blending
         // render water...
-        if (nullptr != waterGrid && waterGrid->m_isVisible && nullptr != skysphere && nullptr != skyboxClouds) {
+        if (nullptr != waterGrid && waterGrid->m_isVisible && 0 != m_skyboxCubemap) {
 
             // reference: https://fileadmin.cs.lth.se/graphics/theses/projects/projgrid/
             //NOTE: this code closely follows the algorithm laid out by the demo at the above reference
