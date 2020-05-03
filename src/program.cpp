@@ -180,6 +180,14 @@ namespace wave_tool {
 
         ImGui::Separator();
 
+        ImGui::Text("WATER-GRID POLYGON MODE:");
+        ImGui::SameLine();
+        if (ImGui::Button("FULL")) m_waterGrid->m_polygonMode = PolygonMode::FILL;
+        ImGui::SameLine();
+        if (ImGui::Button("WIREFRAME")) m_waterGrid->m_polygonMode = PolygonMode::LINE;
+
+        ImGui::Separator();
+
         if (ImGui::SliderFloat("VERTICAL-BOUNCE-WAVE PHASE", &m_renderEngine->verticalBounceWavePhase, 0.0f, 1.0f)) {
             // force-clamp (handle CTRL + LEFT_CLICK)
             m_renderEngine->verticalBounceWavePhase = glm::clamp(m_renderEngine->verticalBounceWavePhase, 0.0f, 1.0f);
@@ -410,7 +418,6 @@ namespace wave_tool {
 
         m_waterGrid = std::make_shared<MeshObject>();
         //m_waterGrid->m_polygonMode = PolygonMode::POINT; //NOTE: doing this atm makes a cool pixel art world
-        //m_waterGrid->m_polygonMode = PolygonMode::LINE;
         //TEMP: hacking some indices together to draw grid as tri-mesh (should move this to MeshObject in the future)...
         //TODO: explain this better in the future (with diagrams)
 
