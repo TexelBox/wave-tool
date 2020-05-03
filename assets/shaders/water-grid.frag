@@ -67,8 +67,7 @@ void main() {
     // compute the distorted uv-space coords...
     vec2 uvLocalReflectionsYDistorted = mix(uvViewportSpace, uvViewportSpaceHeight0, localReflectionsDistortionScalar);
     vec2 uvLocalRefractionsYDistorted = mix(uvViewportSpace, uvViewportSpaceHeight0, localRefractionsDistortionScalar);
-    //TODO: check if these normal directions are correct (I feel as if the reflection x should be positive?)
-    vec2 uvLocalReflectionsXZDistortion = localReflectionsDistortionScalar * -normalVecInViewSpaceOnlyYaw.xz;
+    vec2 uvLocalReflectionsXZDistortion = localReflectionsDistortionScalar * vec2(normalVecInViewSpaceOnlyYaw.x, -normalVecInViewSpaceOnlyYaw.z);
     vec2 uvLocalRefractionsXZDistortion = localRefractionsDistortionScalar * vec2(-normalVecInViewSpaceOnlyYaw.x, normalVecInViewSpaceOnlyYaw.z);
     vec2 uvLocalReflections = clamp(uvLocalReflectionsYDistorted + uvLocalReflectionsXZDistortion, vec2(0.0f, 0.0f), vec2(1.0f, 1.0f));
     vec2 uvLocalRefractions = clamp(uvLocalRefractionsYDistorted + uvLocalRefractionsXZDistortion, vec2(0.0f, 0.0f), vec2(1.0f, 1.0f));
