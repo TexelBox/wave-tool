@@ -180,6 +180,11 @@ namespace wave_tool {
 
         ImGui::Separator();
 
+        if (nullptr != m_terrain) {
+            if (ImGui::Button("TOGGLE TERRAIN")) m_terrain->m_isVisible = !m_terrain->m_isVisible;
+            ImGui::Separator();
+        }
+
         ImGui::Text("WATER-GRID POLYGON MODE:");
         ImGui::SameLine();
         if (ImGui::Button("FULL")) m_waterGrid->m_polygonMode = PolygonMode::FILL;
