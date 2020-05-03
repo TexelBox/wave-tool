@@ -51,6 +51,8 @@ namespace wave_tool {
             //  - colour is RGB given as floating point numbers in the range [0,1]
             void SetPixel(int x, int y, glm::vec3 colour);
 
+            void readFromFrontBuffer();
+
             // I need to call SetPixel from [0,0] to [1023,1023]
 
             // call this in your render function to copy this image onto your screen

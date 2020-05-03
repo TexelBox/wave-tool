@@ -48,6 +48,7 @@
 
 // --------------------------------------------------------------------------
 
+//TODO: refactor this class to work with RGBA (32-bit) images
 namespace wave_tool {
     ImageBuffer::ImageBuffer()
         : m_textureName(0), m_framebufferObject(0),
@@ -124,6 +125,38 @@ namespace wave_tool {
         m_modified = true;
         m_modifiedLower = std::min(m_modifiedLower, y);
         m_modifiedUpper = std::max(m_modifiedUpper, y+1);
+    }
+
+    // --------------------------------------------------------------------------
+
+    // reference: https://stackoverflow.com/questions/5844858/how-to-take-screenshot-in-opengl
+    // reference: https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glReadPixels.xhtml
+    // reference: https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glReadBuffer.xhtml
+    // reference: https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glPixelStore.xhtml
+    void ImageBuffer::readFromFrontBuffer() {
+        unsigned int const NUMBER_OF_COLOUR_CHANNELS{3}; // RGB
+        unsigned int const NUMBER_OF_PIXELS{(unsigned int)m_imageData.size()};
+        GLubyte *pixels{new GLubyte[NUMBER_OF_PIXELS * NUMBER_OF_COLOUR_CHANNELS]};
+        // read pixel data from lower-left corner of framebuffer (front) in row-order
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+        glReadBuffer(GL_FRONT);
+        // reference: https://community.khronos.org/t/error-with-glreadpixels/20480/2
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        glReadPixels(0, 0, m_width, m_height, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+        // reset
+        glReadBuffer(GL_BACK);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+        glPixelStorei(GL_PACK_ALIGNMENT, 4);
+
+        for (unsigned int y = 0; y < m_height; ++y) {
+            for (unsigned int x = 0; x < m_width; ++x) {
+                unsigned int const pixelIndex{y * m_width + x};
+                SetPixel((int)x, (int)y, glm::vec3{pixels[NUMBER_OF_COLOUR_CHANNELS * pixelIndex] / 255.0f, pixels[NUMBER_OF_COLOUR_CHANNELS * pixelIndex + 1] / 255.0f, pixels[NUMBER_OF_COLOUR_CHANNELS * pixelIndex + 2] / 255.0f});
+            }
+        }
+
+        delete[] pixels;
     }
 
     // --------------------------------------------------------------------------

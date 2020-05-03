@@ -21,6 +21,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
+#include "image-buffer.h"
 #include "input-handler.h"
 #include "mesh-object.h"
 #include "object-loader.h"
@@ -84,6 +85,14 @@ namespace wave_tool {
 
         // reference: https://github.com/ocornut/imgui/blob/cc0d4e346a3e4a5408c85c7e6bf0df5e1307bb2d/examples/example_marmalade/main.cpp#L93
         ImGui::Text("AVG. FRAMETIME (VSYNC ON) - %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+        ImGui::Separator();
+
+        if (ImGui::Button("EXPORT IMAGE - SAVE AS")) {
+            exportFrontBufferToImageFile(std::string{m_imageSaveAsName} +".png");
+        }
+        ImGui::SameLine();
+        ImGui::InputText(".png", m_imageSaveAsName, IM_ARRAYSIZE(m_imageSaveAsName));
 
         ImGui::Separator();
 
@@ -254,6 +263,16 @@ namespace wave_tool {
         }
         glfwTerminate();
         return true;
+    }
+
+    // precondition: OpenGL context was properly initialized
+    // precondition: currently set viewport resolution matches window resolution
+    void Program::exportFrontBufferToImageFile(std::string const& filePath) {
+        ImageBuffer image;
+        if (!image.Initialize()) return;
+
+        image.readFromFrontBuffer();
+        image.SaveToFile(filePath);
     }
 
     //NOTE: this method should only be called ONCE at start

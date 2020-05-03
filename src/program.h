@@ -10,9 +10,8 @@
 #define WAVE_TOOL_PROGRAM_H_
 
 #include <memory>
+#include <string>
 #include <vector>
-
-//#include "image-buffer.h"
 
 struct GLFWwindow;
 
@@ -23,6 +22,8 @@ namespace wave_tool {
 
     class Program {
         public:
+            static unsigned int const s_IMAGE_SAVE_AS_NAME_CHAR_LIMIT{128};
+
             Program();
             ~Program();
 
@@ -31,7 +32,7 @@ namespace wave_tool {
             // runs the user defined program (including render loop)
             bool start();
         private:
-            //ImageBuffer image;
+            char m_imageSaveAsName[s_IMAGE_SAVE_AS_NAME_CHAR_LIMIT]{"image"};
             std::vector<std::shared_ptr<MeshObject>> m_meshObjects;
             std::shared_ptr<RenderEngine> m_renderEngine = nullptr;
             std::shared_ptr<MeshObject> m_skyboxClouds = nullptr;
@@ -47,6 +48,7 @@ namespace wave_tool {
             // constructs Dear ImGui UI components
             void buildUI();
             bool cleanup();
+            void exportFrontBufferToImageFile(std::string const& filePath);
             void initScene();
             // prints system specs to the console
             void queryGLVersion();
