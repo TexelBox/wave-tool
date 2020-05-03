@@ -237,6 +237,8 @@ namespace wave_tool {
             GLuint m_emptyVAO{0};
             GLuint m_localReflectionsFBO{0};
             GLuint m_localReflectionsTexture2D{0};
+            GLuint m_localRefractionsFBO{0};
+            GLuint m_localRefractionsTexture2D{0};
             GLuint m_skyboxCubemap{0};
             GLuint m_skyboxFBO{0};
             int m_windowHeight{0};

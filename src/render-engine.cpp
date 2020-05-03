@@ -106,6 +106,33 @@ namespace wave_tool {
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) std::cout << "ERROR: render-engine.cpp - local reflections FBO setup failed!" << std::endl;
         // unbind / reset to default screen framebuffer
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        // LOCAL REFRACTIONS TEXTURE (2D)...
+        glGenTextures(1, &m_localRefractionsTexture2D);
+        glBindTexture(GL_TEXTURE_2D, m_localRefractionsTexture2D);
+        // set options on currently bound texture object...
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        // generate empty texture (2D)...
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_windowWidth, m_windowHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        // unbind
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        // LOCAL REFRACTIONS FBO...
+        glGenFramebuffers(1, &m_localRefractionsFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, m_localRefractionsFBO);
+        // attach colour buffer to FBO
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_localRefractionsTexture2D, 0);
+        // attach depth/stencil buffer to FBO
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_depth24Stencil8RBO);
+        // set fragment shader (location = 0) output
+        glDrawBuffer(GL_COLOR_ATTACHMENT0);
+        // check FBO setup status...
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) std::cout << "ERROR: render-engine.cpp - local refractions FBO setup failed!" << std::endl;
+        // unbind / reset to default screen framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     RenderEngine::~RenderEngine() {
@@ -113,6 +140,8 @@ namespace wave_tool {
 
         glDeleteTextures(1, &m_localReflectionsTexture2D);
         glDeleteFramebuffers(1, &m_localReflectionsFBO);
+        glDeleteTextures(1, &m_localRefractionsTexture2D);
+        glDeleteFramebuffers(1, &m_localRefractionsFBO);
 
         glDeleteTextures(1, &m_skyboxCubemap);
         glDeleteFramebuffers(1, &m_skyboxFBO);
@@ -375,6 +404,88 @@ namespace wave_tool {
 
         // reset
         glFrontFace(GL_CCW);
+        glDisable(GL_CULL_FACE);
+
+        glDisable(GL_CLIP_DISTANCE0);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        ///////////////////////////////////////////////////
+
+        ///////////////////////////////////////////////////
+        // RENDER LOCAL REFRACTIONS TO TEXTURE...
+        glBindFramebuffer(GL_FRAMEBUFFER, m_localRefractionsFBO);
+
+        glEnable(GL_CLIP_DISTANCE0);
+
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+        //NOTE: this must be our standard counter-clockwise
+        glFrontFace(GL_CCW);
+
+        // alpha of 0.0 is used to indicate no local refraction at fragment (i.e. the skybox is here and gets handled as deepest water)
+        glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // render other objects...
+        //TODO: currently not rendering any objects using trivial shader program (cause I don't want to change those shaders), but this is fine since only the debug planes currently are shaded this way
+        //      I could create a modified trivial shader program, or switch everything to the main shader program and then just skip rendering objects flagged as DEBUG
+        //TODO: optimize by batch-drawing objects that use the same shader program, as well as removing redundant uniform setting
+        //TODO: design some sort of wrapper around shader programs that can dynamically set all uniforms properly
+
+        // in column-major order
+        // shrinks/shallows world-space position in the Y-axis by the refractive index ratio of air (n_1 = 1.0003) / water (n_2 = 1.33) ~= 0.75
+        glm::mat4 const LOCAL_REFRACTIONS_MATRIX{1.0f, 0.0f, 0.0f, 0.0f,
+                                                 0.0f, 0.75f, 0.0f, 0.0f,
+                                                 0.0f, 0.0f, 1.0f, 0.0f,
+                                                 0.0f, 0.0f, 0.0f, 1.0f};
+
+        // <A, B, C, D> where Ax + By + Cz = D
+        //TODO: this might be improved by accounting for amplitude
+        // clipping test will succeed if underneath XZ-plane
+        //TODO: see if any padding is needed to hide artifacts when grazing the surface
+        glm::vec4 const LOCAL_REFRACTIONS_CLIP_PLANE{0.0f, -1.0f, 0.0f, 0.0f};
+
+        for (std::shared_ptr<MeshObject const> o : objects) {
+            assert(0 != o->shaderProgramID);
+
+            // don't render invisible objects...
+            if (!o->m_isVisible) continue;
+
+            if (o->shaderProgramID == mainProgram) {
+                glm::mat4 const modelMat{LOCAL_REFRACTIONS_MATRIX * o->getModel()};
+                glm::mat4 const modelView{view * modelMat};
+
+                // enable shader program...
+                glUseProgram(mainProgram);
+                // bind geometry data...
+                glBindVertexArray(o->vao);
+
+                // set uniforms...
+                glUniform4fv(glGetUniformLocation(mainProgram, "clipPlane0"), 1, glm::value_ptr(LOCAL_REFRACTIONS_CLIP_PLANE));
+                glUniform4fv(glGetUniformLocation(mainProgram, "fogColourFarAtCurrentTime"), 1, glm::value_ptr(fogColourFarAtCurrentTime));
+                glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusFar"), fogDepthRadiusFar);
+                glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusNear"), fogDepthRadiusNear);
+                glUniform1i(glGetUniformLocation(mainProgram, "hasNormals"), !o->normals.empty());
+                glUniform1i(glGetUniformLocation(mainProgram, "hasTexture"), o->hasTexture);
+                Texture::bind2DTexture(mainProgram, o->textureID, std::string("image"));
+                //TODO: make sure the shader works with a directional light
+                glUniform3fv(glGetUniformLocation(mainProgram, "lightPos"), 1, glm::value_ptr(sunPosition));
+                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelMat"), 1, GL_FALSE, glm::value_ptr(modelMat));
+                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelView"), 1, GL_FALSE, glm::value_ptr(modelView));
+                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+                glUniform1f(glGetUniformLocation(mainProgram, "zFar"), Z_FAR);
+
+                // POINT, LINE or FILL...
+                glPolygonMode(GL_FRONT_AND_BACK, o->m_polygonMode);
+                glDrawElements(o->m_primitiveMode, o->drawFaces.size(), GL_UNSIGNED_INT, (void*)0);
+
+                Texture::unbind2DTexture();
+                // unbind
+                glBindVertexArray(0);
+            }
+        }
+
+        // reset
         glDisable(GL_CULL_FACE);
 
         glDisable(GL_CLIP_DISTANCE0);
@@ -771,6 +882,7 @@ namespace wave_tool {
                 glUniform1f(glGetUniformLocation(waterGridProgram, "heightmapDisplacementScale"), heightmapDisplacementScale);
                 glUniform1f(glGetUniformLocation(waterGridProgram, "heightmapSampleScale"), heightmapSampleScale);
                 Texture::bind2DTexture(waterGridProgram, m_localReflectionsTexture2D, "localReflectionsTexture2D");
+                Texture::bind2DTexture(waterGridProgram, m_localRefractionsTexture2D, "localRefractionsTexture2D");
 
                 //TODO: refactor into own function
                 // bind texture...
@@ -1036,6 +1148,10 @@ namespace wave_tool {
         glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
         glBindTexture(GL_TEXTURE_2D, m_localReflectionsTexture2D);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_windowWidth, m_windowHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        glBindTexture(GL_TEXTURE_2D, m_localRefractionsTexture2D);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_windowWidth, m_windowHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
         glBindTexture(GL_TEXTURE_2D, 0);
     }
