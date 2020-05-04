@@ -537,6 +537,50 @@ namespace wave_tool {
         ///////////////////////////////////////////////////
 
         ///////////////////////////////////////////////////
+        // RENDER WORLD-SPACE DEPTH TEXTURE (of all generic objects, other than water-grid)
+        glBindFramebuffer(GL_FRAMEBUFFER, m_worldSpaceDepthFBO);
+
+        glDisable(GL_BLEND);
+
+        // since the skybox is at infinity, we can just render it with the clear colour
+        // alpha of 0.0 is used to indicate the skybox fragments (max depth of 1.0)
+        glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // enable shader program...
+        glUseProgram(worldSpaceDepthProgram);
+
+        for (std::shared_ptr<MeshObject const> o : objects) {
+            // don't render invisible objects or non-generics...
+            if (!o->m_isVisible || Tag::GENERIC != o->getTag()) continue;
+
+            glm::mat4 const modelViewMat{view * o->getModel()};
+            glm::mat4 const mvpMat{viewProjection * o->getModel()};
+
+            // bind geometry data...
+            glBindVertexArray(o->vao);
+
+            // set uniforms...
+            glUniformMatrix4fv(glGetUniformLocation(worldSpaceDepthProgram, "modelViewMat"), 1, GL_FALSE, glm::value_ptr(modelViewMat));
+            glUniformMatrix4fv(glGetUniformLocation(worldSpaceDepthProgram, "mvpMat"), 1, GL_FALSE, glm::value_ptr(mvpMat));
+            glUniform1f(glGetUniformLocation(worldSpaceDepthProgram, "zFar"), Z_FAR);
+
+            // POINT, LINE or FILL...
+            glPolygonMode(GL_FRONT_AND_BACK, o->m_polygonMode);
+            glDrawElements(o->m_primitiveMode, o->drawFaces.size(), GL_UNSIGNED_INT, (void*)0);
+
+            // unbind
+            glBindVertexArray(0);
+        }
+
+        // disable
+        glUseProgram(0);
+        // reset
+        glEnable(GL_BLEND);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        ///////////////////////////////////////////////////
+
+        ///////////////////////////////////////////////////
         // now render everything else to main screen framebuffer...
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -947,6 +991,7 @@ namespace wave_tool {
                 glUniform2fv(glGetUniformLocation(waterGridProgram, "viewportWidthHeight"), 1, glm::value_ptr(glm::vec2{(float)m_windowWidth, (float)m_windowHeight}));
                 glUniformMatrix4fv(glGetUniformLocation(waterGridProgram, "viewProjection"), 1, GL_FALSE, glm::value_ptr(viewProjection));
                 glUniform1f(glGetUniformLocation(waterGridProgram, "waveAnimationTimeInSeconds"), waveAnimationTimeInSeconds);
+                Texture::bind2DTexture(waterGridProgram, m_worldSpaceDepthTexture2D, "worldSpaceDepthTexture2D");
                 glUniform1f(glGetUniformLocation(waterGridProgram, "zFar"), Z_FAR);
 
                 // draw...
