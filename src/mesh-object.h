@@ -28,6 +28,12 @@ namespace wave_tool {
         FILL = GL_FILL, // full-faced
     };
 
+    // object's semantic tag
+    enum Tag {
+        GENERIC = 0,
+        DEBUG = 1
+    };
+
     // Loads and stores (potentially textured) 3D meshes from .obj files.
     class MeshObject {
         public:
@@ -61,10 +67,12 @@ namespace wave_tool {
             void setPosition(glm::vec3 const position) { m_position = position; updateModel(); }
             void setRotation(glm::vec3 const rotation) { m_rotation = rotation; updateModel(); }
             void setScale(glm::vec3 const scale) { m_scale = scale; updateModel(); }
+            inline void setTag(Tag const& tag) { m_tag = tag; }
 
             glm::vec3 getPosition() const { return m_position; }
             glm::vec3 getRotation() const { return m_rotation; }
             glm::vec3 getScale() const { return m_scale; }
+            inline Tag getTag() const { return m_tag; }
 
             glm::mat4 getModel() const { return m_model; }
 
@@ -74,6 +82,7 @@ namespace wave_tool {
             glm::vec3 m_position = glm::vec3(0.0f, 0.0f, 0.0f); // (x, y, z) position vector of object's origin point
             glm::vec3 m_rotation = glm::vec3(0.0f, 0.0f, 0.0f); // (x, y, z) rotation vector specified in euler angles (x degrees ccw around +x axis, y degrees ccw around +y axis, z degrees ccw around +z axis)
             glm::vec3 m_scale = glm::vec3(1.0f, 1.0f, 1.0f); // (x, y, z) scale vector relative to object's origin point
+            Tag m_tag{Tag::GENERIC};
 
             glm::mat4 m_model = glm::mat4(); // model matrix
 

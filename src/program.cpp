@@ -383,6 +383,7 @@ namespace wave_tool {
 
         // YZ-PLANE / +X-AXIS (RED)...
         m_yzPlane = std::make_shared<MeshObject>();
+        m_yzPlane->setTag(Tag::DEBUG);
 
         for (int y = -maxY; y <= maxY; y += deltaY) {
             m_yzPlane->drawVerts.push_back(glm::vec3(0.0f, y, -maxZ));
@@ -409,6 +410,7 @@ namespace wave_tool {
         // XZ-PLANE / +Y-AXIS (GREEN)...
 
         m_xzPlane = std::make_shared<MeshObject>();
+        m_xzPlane->setTag(Tag::DEBUG);
 
         for (int x = -maxX; x <= maxX; x += deltaX) {
             m_xzPlane->drawVerts.push_back(glm::vec3(x, 0.0f, -maxZ));
@@ -435,6 +437,7 @@ namespace wave_tool {
         // XY-PLANE / +Z-AXIS (BLUE)
 
         m_xyPlane = std::make_shared<MeshObject>();
+        m_xyPlane->setTag(Tag::DEBUG);
 
         for (int x = -maxX; x <= maxX; x += deltaX) {
             m_xyPlane->drawVerts.push_back(glm::vec3(x, -maxY, 0.0f));
