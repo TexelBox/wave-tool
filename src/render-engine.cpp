@@ -27,16 +27,21 @@ namespace wave_tool {
         trivialProgram = ShaderTools::compileShaders("../../assets/shaders/trivial.vert", "../../assets/shaders/trivial.frag");
         mainProgram = ShaderTools::compileShaders("../../assets/shaders/main.vert", "../../assets/shaders/main.frag");
         waterGridProgram = ShaderTools::compileShaders("../../assets/shaders/water-grid.vert", "../../assets/shaders/water-grid.frag");
+        worldSpaceDepthProgram = ShaderTools::compileShaders("../../assets/shaders/world-space-depth.vert", "../../assets/shaders/world-space-depth.frag");
 
         // Set OpenGL state
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_LINE_SMOOTH);
         glPointSize(30.0f);
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        ///////////////////////////////////////////////////
 
+        ///////////////////////////////////////////////////
         // this dummy VAO can be used for attribute-less rendering
         glGenVertexArrays(1, &m_emptyVAO);
+        ///////////////////////////////////////////////////
 
+        ///////////////////////////////////////////////////
         // init stuff for dynamic skybox texture updating...
         // reference: https://www.youtube.com/watch?v=21UsMuFTN0k
         // reference: https://www.youtube.com/watch?v=lW_iqrtJORc
@@ -71,7 +76,9 @@ namespace wave_tool {
         }
         // unbind
         glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+        ///////////////////////////////////////////////////
 
+        ///////////////////////////////////////////////////
         // reference: https://learnopengl.com/Advanced-OpenGL/Framebuffers
         // REUSABLE DEPTH/STENCIL RBO...
         glGenRenderbuffers(1, &m_depth24Stencil8RBO);
@@ -79,7 +86,9 @@ namespace wave_tool {
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_windowWidth, m_windowHeight);
         // unbind
         glBindRenderbuffer(GL_RENDERBUFFER, 0);
+        ///////////////////////////////////////////////////
 
+        ///////////////////////////////////////////////////
         // LOCAL REFLECTIONS TEXTURE (2D)...
         glGenTextures(1, &m_localReflectionsTexture2D);
         glBindTexture(GL_TEXTURE_2D, m_localReflectionsTexture2D);
@@ -106,7 +115,9 @@ namespace wave_tool {
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) std::cout << "ERROR: render-engine.cpp - local reflections FBO setup failed!" << std::endl;
         // unbind / reset to default screen framebuffer
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        ///////////////////////////////////////////////////
 
+        ///////////////////////////////////////////////////
         // LOCAL REFRACTIONS TEXTURE (2D)...
         glGenTextures(1, &m_localRefractionsTexture2D);
         glBindTexture(GL_TEXTURE_2D, m_localRefractionsTexture2D);
@@ -133,6 +144,35 @@ namespace wave_tool {
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) std::cout << "ERROR: render-engine.cpp - local refractions FBO setup failed!" << std::endl;
         // unbind / reset to default screen framebuffer
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        ///////////////////////////////////////////////////
+
+        ///////////////////////////////////////////////////
+        // WORLD-SPACE DEPTH TEXTURE (2D)...
+        glGenTextures(1, &m_worldSpaceDepthTexture2D);
+        glBindTexture(GL_TEXTURE_2D, m_worldSpaceDepthTexture2D);
+        // set options on currently bound texture object...
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        // generate empty texture (2D)...
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_windowWidth, m_windowHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        // unbind
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        // WORLD-SPACE DEPTH FBO...
+        glGenFramebuffers(1, &m_worldSpaceDepthFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, m_worldSpaceDepthFBO);
+        // attach colour buffer to FBO
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_worldSpaceDepthTexture2D, 0);
+        // attach depth/stencil buffer to FBO
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_depth24Stencil8RBO);
+        // set fragment shader (location = 0) output
+        glDrawBuffer(GL_COLOR_ATTACHMENT0);
+        // check FBO setup status...
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) std::cout << "ERROR: render-engine.cpp - world-space depth FBO setup failed!" << std::endl;
+        // unbind / reset to default screen framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     RenderEngine::~RenderEngine() {
@@ -142,6 +182,8 @@ namespace wave_tool {
         glDeleteFramebuffers(1, &m_localReflectionsFBO);
         glDeleteTextures(1, &m_localRefractionsTexture2D);
         glDeleteFramebuffers(1, &m_localRefractionsFBO);
+        glDeleteTextures(1, &m_worldSpaceDepthTexture2D);
+        glDeleteFramebuffers(1, &m_worldSpaceDepthFBO);
 
         glDeleteTextures(1, &m_skyboxCubemap);
         glDeleteFramebuffers(1, &m_skyboxFBO);
@@ -156,6 +198,7 @@ namespace wave_tool {
         glDeleteProgram(skysphereProgram);
         glDeleteProgram(trivialProgram);
         glDeleteProgram(waterGridProgram);
+        glDeleteProgram(worldSpaceDepthProgram);
     }
 
     std::shared_ptr<Camera> RenderEngine::getCamera() const {
@@ -1157,6 +1200,10 @@ namespace wave_tool {
         glBindTexture(GL_TEXTURE_2D, 0);
 
         glBindTexture(GL_TEXTURE_2D, m_localRefractionsTexture2D);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_windowWidth, m_windowHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        glBindTexture(GL_TEXTURE_2D, m_worldSpaceDepthTexture2D);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_windowWidth, m_windowHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
         glBindTexture(GL_TEXTURE_2D, 0);
     }

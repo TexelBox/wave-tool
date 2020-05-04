@@ -211,6 +211,7 @@ namespace wave_tool {
             inline GLuint getSkysphereProgram() const { return skysphereProgram; }
             inline GLuint getTrivialProgram() const { return trivialProgram; }
             inline GLuint getWaterGridProgram() const { return waterGridProgram; }
+            inline GLuint getWorldSpaceDepthProgram() const { return worldSpaceDepthProgram; }
 
             void render(std::shared_ptr<const MeshObject> skyboxStars, std::shared_ptr<const MeshObject> skysphere, std::shared_ptr<const MeshObject> skyboxClouds, std::shared_ptr<const MeshObject> waterGrid, std::vector<std::shared_ptr<MeshObject>> const& objects);
             void assignBuffers(MeshObject &object);
@@ -232,6 +233,7 @@ namespace wave_tool {
             GLuint trivialProgram;
             GLuint mainProgram;
             GLuint waterGridProgram;
+            GLuint worldSpaceDepthProgram;
 
             GLuint m_depth24Stencil8RBO{0};
             GLuint m_emptyVAO{0};
@@ -239,6 +241,8 @@ namespace wave_tool {
             GLuint m_localReflectionsTexture2D{0};
             GLuint m_localRefractionsFBO{0};
             GLuint m_localRefractionsTexture2D{0};
+            GLuint m_worldSpaceDepthFBO{0};
+            GLuint m_worldSpaceDepthTexture2D{0};
             GLuint m_skyboxCubemap{0};
             GLuint m_skyboxFBO{0};
             int m_windowHeight{0};
