@@ -487,7 +487,7 @@ namespace wave_tool {
         }
 
         // skysphere...
-        m_skysphere = ObjectLoader::createTriMeshObject("../../assets/models/imports/uv-sphere.obj", true, true);
+        m_skysphere = ObjectLoader::createTriMeshObject("../../assets/models/imports/icosphere.obj", true, true);
         if (nullptr != m_skysphere) {
             m_skysphere->textureID = m_renderEngine->load1DTexture("../../assets/textures/sky-gradient.png");
             // fallback #1 (no skysphere)
