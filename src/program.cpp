@@ -81,11 +81,14 @@ namespace wave_tool {
         ImGui::SetNextWindowSizeConstraints(ImVec2(1024.0f, 64.0f), ImVec2(1024.0f, 512.0f));
         //ImGui::SetWindowSize(ImVec2(1024.0f, 256.0f));
         // begin main window...
-        if (!ImGui::Begin("SETTINGS")) {
-            // early out (optimization) if the window is collapsed
-            ImGui::End();
-            return;
-        }
+        //NOTE: don't do this with my current setup, cause the early return will prevent all animations from updating (so effectively this is a cheap but unwanted pause button!)
+        //TODO: move animation updates into a better location, add a proper pause button and then add this back in
+        //if (!ImGui::Begin("SETTINGS")) {
+        //    // early out (optimization) if the window is collapsed
+        //    ImGui::End();
+        //    return;
+        //}
+        ImGui::Begin("SETTINGS");
 
         ImGui::Separator();
 
