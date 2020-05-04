@@ -70,6 +70,7 @@ namespace wave_tool {
         return cleanup();
     }
 
+    //TODO: look at Dear ImGui demo code and expand this to be better organized
     void Program::buildUI() {
         // start Dear ImGui frame...
         ImGui_ImplOpenGL3_NewFrame();
@@ -79,7 +80,12 @@ namespace wave_tool {
         ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
         ImGui::SetNextWindowSizeConstraints(ImVec2(1024.0f, 64.0f), ImVec2(1024.0f, 512.0f));
         //ImGui::SetWindowSize(ImVec2(1024.0f, 256.0f));
-        ImGui::Begin("SETTINGS");
+        // begin main window...
+        if (!ImGui::Begin("SETTINGS")) {
+            // early out (optimization) if the window is collapsed
+            ImGui::End();
+            return;
+        }
 
         ImGui::Separator();
 
@@ -189,18 +195,98 @@ namespace wave_tool {
 
         ImGui::Separator();
 
-        if (nullptr != m_terrain) {
-            if (ImGui::Button("TOGGLE TERRAIN")) m_terrain->m_isVisible = !m_terrain->m_isVisible;
+        if (nullptr != m_skyboxStars || nullptr != m_skysphere || nullptr != m_skyboxClouds) {
+            if (ImGui::TreeNode("SKYBOX")) {
+                ImGui::Separator();
+                if (nullptr != m_skyboxStars) {
+                    if (ImGui::TreeNode("SPACE/STAR LAYER")) {
+                        ImGui::Separator();
+                        ImGui::Text("VISIBILITY:");
+                        ImGui::SameLine();
+                        if (ImGui::Button("TOGGLE##0")) m_skyboxStars->m_isVisible = !m_skyboxStars->m_isVisible;
+                        ImGui::SameLine();
+                        ImGui::Text("POLYGON MODE:");
+                        ImGui::SameLine();
+                        if (ImGui::Button("FULL##0")) m_skyboxStars->m_polygonMode = PolygonMode::FILL;
+                        ImGui::SameLine();
+                        if (ImGui::Button("WIREFRAME##0")) m_skyboxStars->m_polygonMode = PolygonMode::LINE;
+                        ImGui::Separator();
+                        ImGui::TreePop();
+                    }
+                }
+                if (nullptr != m_skysphere) {
+                    if (ImGui::TreeNode("ATMOSPHERE/SUN LAYER")) {
+                        ImGui::Separator();
+                        ImGui::Text("VISIBILITY:");
+                        ImGui::SameLine();
+                        if (ImGui::Button("TOGGLE##1")) m_skysphere->m_isVisible = !m_skysphere->m_isVisible;
+                        ImGui::SameLine();
+                        ImGui::Text("POLYGON MODE:");
+                        ImGui::SameLine();
+                        if (ImGui::Button("FULL##1")) m_skysphere->m_polygonMode = PolygonMode::FILL;
+                        ImGui::SameLine();
+                        if (ImGui::Button("WIREFRAME##1")) m_skysphere->m_polygonMode = PolygonMode::LINE;
+                        ImGui::Separator();
+                        ImGui::TreePop();
+                    }
+                }
+                if (nullptr != m_skyboxClouds) {
+                    if (ImGui::TreeNode("CLOUD LAYER")) {
+                        ImGui::Separator();
+                        ImGui::Text("VISIBILITY:");
+                        ImGui::SameLine();
+                        if (ImGui::Button("TOGGLE##2")) m_skyboxClouds->m_isVisible = !m_skyboxClouds->m_isVisible;
+                        ImGui::SameLine();
+                        ImGui::Text("POLYGON MODE:");
+                        ImGui::SameLine();
+                        if (ImGui::Button("FULL##2")) m_skyboxClouds->m_polygonMode = PolygonMode::FILL;
+                        ImGui::SameLine();
+                        if (ImGui::Button("WIREFRAME##2")) m_skyboxClouds->m_polygonMode = PolygonMode::LINE;
+                        ImGui::Separator();
+                        ImGui::TreePop();
+                    }
+                }
+                ImGui::Separator();
+                ImGui::TreePop();
+            }
             ImGui::Separator();
         }
 
-        ImGui::Text("WATER-GRID POLYGON MODE:");
-        ImGui::SameLine();
-        if (ImGui::Button("FULL")) m_waterGrid->m_polygonMode = PolygonMode::FILL;
-        ImGui::SameLine();
-        if (ImGui::Button("WIREFRAME")) m_waterGrid->m_polygonMode = PolygonMode::LINE;
+        if (nullptr != m_terrain) {
+            if (ImGui::TreeNode("TERRAIN")) {
+                ImGui::Separator();
+                ImGui::Text("VISIBILITY:");
+                ImGui::SameLine();
+                if (ImGui::Button("TOGGLE##3")) m_terrain->m_isVisible = !m_terrain->m_isVisible;
+                ImGui::SameLine();
+                ImGui::Text("POLYGON MODE:");
+                ImGui::SameLine();
+                if (ImGui::Button("FULL##3")) m_terrain->m_polygonMode = PolygonMode::FILL;
+                ImGui::SameLine();
+                if (ImGui::Button("WIREFRAME##3")) m_terrain->m_polygonMode = PolygonMode::LINE;
+                ImGui::Separator();
+                ImGui::TreePop();
+            }
+            ImGui::Separator();
+        }
 
-        ImGui::Separator();
+        if (nullptr != m_waterGrid) {
+            if (ImGui::TreeNode("WATER-GRID")) {
+                ImGui::Separator();
+                ImGui::Text("VISIBILITY:");
+                ImGui::SameLine();
+                if (ImGui::Button("TOGGLE##4")) m_waterGrid->m_isVisible = !m_waterGrid->m_isVisible;
+                ImGui::SameLine();
+                ImGui::Text("POLYGON MODE:");
+                ImGui::SameLine();
+                if (ImGui::Button("FULL##4")) m_waterGrid->m_polygonMode = PolygonMode::FILL;
+                ImGui::SameLine();
+                if (ImGui::Button("WIREFRAME##4")) m_waterGrid->m_polygonMode = PolygonMode::LINE;
+                ImGui::Separator();
+                ImGui::TreePop();
+            }
+            ImGui::Separator();
+        }
 
         if (ImGui::SliderFloat("VERTICAL-BOUNCE-WAVE PHASE", &m_renderEngine->verticalBounceWavePhase, 0.0f, 1.0f)) {
             // force-clamp (handle CTRL + LEFT_CLICK)
