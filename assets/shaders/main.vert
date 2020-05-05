@@ -7,56 +7,41 @@
 // reference: https://prideout.net/clip-planes
 uniform vec4 clipPlane0 = vec4(0.0f, 0.0f, 0.0f, 1.0f); // <A, B, C, D> where Ax + By + Cz = D
 uniform mat4 modelMat;
-uniform mat4 modelView;
-uniform mat4 projection;
-uniform vec3 lightPos;
-uniform float zFar;
+uniform mat4 modelViewMat;
+uniform mat4 mvpMat;
 
-layout (location = 0) in vec3 vertex;
+layout (location = 0) in vec3 position;
 layout (location = 1) in vec3 normal;
 layout (location = 2) in vec2 uv;
 layout (location = 3) in vec3 colour;
 
-out vec3 N;
-out vec3 L;
-out vec3 V;
-out vec2 UV;
 out vec3 COLOUR;
-
-out vec3 sunPosition;
-out float viewVecDepth;
+out vec3 normalVec;
+out vec2 UV;
+out vec3 viewSpacePosition;
+out vec3 viewVec;
 
 out float gl_ClipDistance[1];
 
-//TODO: refactor this shader
-void main(void) {
+void main() {
+    vec4 positionHomogenous = vec4(position, 1.0f);
+    vec4 normalHomogenous = vec4(normal, 0.0f);
 
-    sunPosition = lightPos;
-
+    // output (pass-throughs)...
+    COLOUR = colour;
     UV = uv;
 
-    // Put light in camera space
-    vec4 lightCameraSpace = modelView * vec4(lightPos, 1.0f);
+    // output view-space position...
+    viewSpacePosition = (modelViewMat * positionHomogenous).xyz;
+    // output view vector...
+    viewVec = normalize(viewSpacePosition);
 
-    // Put normal in camera space (no non-uniform scaling so we can use just modelView)
-    vec4 nCameraSpace = modelView * vec4(normal, 0.0f);
-    N = normalize(nCameraSpace.xyz);
+    // output clip-space position...
+    gl_Position = mvpMat * positionHomogenous;
 
-    // Transform model and put in camera space
-    vec4 pCameraSpace = modelView * vec4(vertex, 1.0f);
-    vec3 P = pCameraSpace.xyz;
+    // apply manual clip plane...
+    gl_ClipDistance[0] = dot(modelMat * positionHomogenous, clipPlane0);
 
-    float viewVecLength = length(P);
-    //TODO: clipping will probably interpolate wrong if I clamp the upper bound, so just remove this clamping when I implement the spherical clipping
-    viewVecDepth = clamp(viewVecLength / zFar, 0.0f, 1.0f);
-
-    // Calculate L and V vectors
-    L = normalize(lightCameraSpace.xyz - P);
-    V = normalize(-P);
-
-    gl_Position = projection * pCameraSpace;
-
-    gl_ClipDistance[0] = dot(modelMat * vec4(vertex, 1.0f), clipPlane0);
-
-    COLOUR = colour;
+    // output normal vector
+    normalVec = normalize((modelViewMat * normalHomogenous).xyz);
 }

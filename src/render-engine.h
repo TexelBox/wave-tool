@@ -203,6 +203,7 @@ namespace wave_tool {
             ~RenderEngine();
 
             std::shared_ptr<Camera> getCamera() const;
+            inline GLuint getDepthProgram() const { return depthProgram; }
             inline GLuint getMainProgram() const { return mainProgram; }
             inline GLuint getScreenSpaceQuadProgram() const { return screenSpaceQuadProgram; }
             inline GLuint getSkyboxCloudsProgram() const { return skyboxCloudsProgram; }
@@ -225,6 +226,7 @@ namespace wave_tool {
         private:
             std::shared_ptr<Camera> m_camera = nullptr;
 
+            GLuint depthProgram;
             GLuint screenSpaceQuadProgram;
             GLuint skyboxCloudsProgram;
             GLuint skyboxStarsProgram;
@@ -236,6 +238,8 @@ namespace wave_tool {
             GLuint worldSpaceDepthProgram;
 
             GLuint m_depth24Stencil8RBO{0};
+            GLuint m_depthFBO{0};
+            GLuint m_depthTexture2D{0};
             GLuint m_emptyVAO{0};
             GLuint m_localReflectionsFBO{0};
             GLuint m_localReflectionsTexture2D{0};

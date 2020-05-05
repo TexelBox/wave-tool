@@ -19,6 +19,7 @@ namespace wave_tool {
         m_camera = std::make_shared<Camera>(72.0f, (float)m_windowWidth / m_windowHeight, Z_NEAR, Z_FAR, glm::vec3(0.0f, 4.0f, 70.0f));
 
         //TODO: assert these are not 0, or wrap them and assert non-null
+        depthProgram = ShaderTools::compileShaders("../../assets/shaders/depth.vert", "../../assets/shaders/depth.frag");
         screenSpaceQuadProgram = ShaderTools::compileShaders("../../assets/shaders/screen-space-quad.vert", "../../assets/shaders/screen-space-quad.frag");
         skyboxCloudsProgram = ShaderTools::compileShaders("../../assets/shaders/skybox-clouds.vert", "../../assets/shaders/skybox-clouds.frag");
         skyboxStarsProgram = ShaderTools::compileShaders("../../assets/shaders/skybox-stars.vert", "../../assets/shaders/skybox-stars.frag");
@@ -86,6 +87,22 @@ namespace wave_tool {
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_windowWidth, m_windowHeight);
         // unbind
         glBindRenderbuffer(GL_RENDERBUFFER, 0);
+        ///////////////////////////////////////////////////
+
+        ///////////////////////////////////////////////////
+        // reference: https://learnopengl.com/Advanced-Lighting/Shadows/Shadow-Mapping
+        // REUSABLE DEPTH TEXTURE (2D)...
+        glGenTextures(1, &m_depthTexture2D);
+        glBindTexture(GL_TEXTURE_2D, m_depthTexture2D);
+        // set options on currently bound texture object...
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        // generate empty texture (2D)...
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, m_windowWidth, m_windowHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+        // unbind
+        glBindTexture(GL_TEXTURE_2D, 0);
         ///////////////////////////////////////////////////
 
         ///////////////////////////////////////////////////
@@ -173,10 +190,27 @@ namespace wave_tool {
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) std::cout << "ERROR: render-engine.cpp - world-space depth FBO setup failed!" << std::endl;
         // unbind / reset to default screen framebuffer
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        ///////////////////////////////////////////////////
+
+        ///////////////////////////////////////////////////
+        // DEPTH FBO...
+        glGenFramebuffers(1, &m_depthFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, m_depthFBO);
+        // attach depth buffer to FBO
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_depthTexture2D, 0);
+        // since we don't have a colour buffer, we must explicitly declare not to render any colour data
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+        // check FBO setup status...
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) std::cout << "ERROR: render-engine.cpp - depth FBO setup failed!" << std::endl;
+        // unbind / reset to default screen framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        ///////////////////////////////////////////////////
     }
 
     RenderEngine::~RenderEngine() {
         glDeleteRenderbuffers(1, &m_depth24Stencil8RBO);
+        glDeleteTextures(1, &m_depthTexture2D);
 
         glDeleteTextures(1, &m_localReflectionsTexture2D);
         glDeleteFramebuffers(1, &m_localReflectionsFBO);
@@ -184,6 +218,7 @@ namespace wave_tool {
         glDeleteFramebuffers(1, &m_localRefractionsFBO);
         glDeleteTextures(1, &m_worldSpaceDepthTexture2D);
         glDeleteFramebuffers(1, &m_worldSpaceDepthFBO);
+        glDeleteFramebuffers(1, &m_depthFBO);
 
         glDeleteTextures(1, &m_skyboxCubemap);
         glDeleteFramebuffers(1, &m_skyboxFBO);
@@ -221,6 +256,7 @@ namespace wave_tool {
         float const timeOfDayInDays{timeOfDayInHours / 24.0f};
         float const timeThetaInRadians{timeOfDayInDays * glm::two_pi<float>() - glm::half_pi<float>()};
         glm::vec3 const sunPosition{glm::cos(timeThetaInRadians), glm::sin(timeThetaInRadians), 0.0f};
+        glm::vec3 const lightVec{glm::normalize(glm::vec3{view * glm::vec4{sunPosition, 0.0f}})};
 
         // tint fades to black when sun is lower in sky
         glm::vec4 const fogColourFarAtCurrentTime{glm::clamp(sunPosition.y, 0.0f, 1.0f) * glm::vec3{fogColourFarAtNoon}, fogColourFarAtNoon.a};
@@ -413,7 +449,8 @@ namespace wave_tool {
 
             if (o->shaderProgramID == mainProgram) {
                 glm::mat4 const modelMat{LOCAL_REFLECTIONS_MATRIX * o->getModel()};
-                glm::mat4 const modelView{view * modelMat};
+                glm::mat4 const modelViewMat{view * modelMat};
+                glm::mat4 const mvpMat{projection * modelViewMat};
 
                 // enable shader program...
                 glUseProgram(mainProgram);
@@ -426,13 +463,13 @@ namespace wave_tool {
                 glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusFar"), fogDepthRadiusFar);
                 glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusNear"), fogDepthRadiusNear);
                 glUniform1i(glGetUniformLocation(mainProgram, "hasNormals"), !o->normals.empty());
-                glUniform1i(glGetUniformLocation(mainProgram, "hasTexture"), o->hasTexture);
-                Texture::bind2DTexture(mainProgram, o->textureID, std::string("image"));
-                //TODO: make sure the shader works with a directional light
-                glUniform3fv(glGetUniformLocation(mainProgram, "lightPos"), 1, glm::value_ptr(sunPosition));
+                //TODO: handle this better
+                glUniform1i(glGetUniformLocation(mainProgram, "isTextured"), o->hasTexture);
+                glUniform3fv(glGetUniformLocation(mainProgram, "lightVec"), 1, glm::value_ptr(lightVec));
+                Texture::bind2DTexture(mainProgram, o->textureID, "textureData");
                 glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelMat"), 1, GL_FALSE, glm::value_ptr(modelMat));
-                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelView"), 1, GL_FALSE, glm::value_ptr(modelView));
-                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelViewMat"), 1, GL_FALSE, glm::value_ptr(modelViewMat));
+                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "mvpMat"), 1, GL_FALSE, glm::value_ptr(mvpMat));
                 glUniform1f(glGetUniformLocation(mainProgram, "zFar"), Z_FAR);
 
                 // POINT, LINE or FILL...
@@ -496,7 +533,8 @@ namespace wave_tool {
 
             if (o->shaderProgramID == mainProgram) {
                 glm::mat4 const modelMat{LOCAL_REFRACTIONS_MATRIX * o->getModel()};
-                glm::mat4 const modelView{view * modelMat};
+                glm::mat4 const modelViewMat{view * modelMat};
+                glm::mat4 const mvpMat{projection * modelViewMat};
 
                 // enable shader program...
                 glUseProgram(mainProgram);
@@ -509,13 +547,13 @@ namespace wave_tool {
                 glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusFar"), fogDepthRadiusFar);
                 glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusNear"), fogDepthRadiusNear);
                 glUniform1i(glGetUniformLocation(mainProgram, "hasNormals"), !o->normals.empty());
-                glUniform1i(glGetUniformLocation(mainProgram, "hasTexture"), o->hasTexture);
-                Texture::bind2DTexture(mainProgram, o->textureID, std::string("image"));
-                //TODO: make sure the shader works with a directional light
-                glUniform3fv(glGetUniformLocation(mainProgram, "lightPos"), 1, glm::value_ptr(sunPosition));
+                //TODO: handle this better
+                glUniform1i(glGetUniformLocation(mainProgram, "isTextured"), o->hasTexture);
+                glUniform3fv(glGetUniformLocation(mainProgram, "lightVec"), 1, glm::value_ptr(lightVec));
+                Texture::bind2DTexture(mainProgram, o->textureID, "textureData");
                 glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelMat"), 1, GL_FALSE, glm::value_ptr(modelMat));
-                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelView"), 1, GL_FALSE, glm::value_ptr(modelView));
-                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelViewMat"), 1, GL_FALSE, glm::value_ptr(modelViewMat));
+                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "mvpMat"), 1, GL_FALSE, glm::value_ptr(mvpMat));
                 glUniform1f(glGetUniformLocation(mainProgram, "zFar"), Z_FAR);
 
                 // POINT, LINE or FILL...
@@ -535,7 +573,7 @@ namespace wave_tool {
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         ///////////////////////////////////////////////////
-
+/*
         ///////////////////////////////////////////////////
         // RENDER WORLD-SPACE DEPTH TEXTURE (of all generic objects, other than water-grid)
         glBindFramebuffer(GL_FRAMEBUFFER, m_worldSpaceDepthFBO);
@@ -555,7 +593,7 @@ namespace wave_tool {
             if (!o->m_isVisible || Tag::GENERIC != o->getTag()) continue;
 
             glm::mat4 const modelViewMat{view * o->getModel()};
-            glm::mat4 const mvpMat{viewProjection * o->getModel()};
+            glm::mat4 const mvpMat{projection * modelViewMat};
 
             // bind geometry data...
             glBindVertexArray(o->vao);
@@ -577,6 +615,42 @@ namespace wave_tool {
         glUseProgram(0);
         // reset
         glEnable(GL_BLEND);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        ///////////////////////////////////////////////////
+*/
+        ///////////////////////////////////////////////////
+        // RENDER DEPTH TEXTURE (of all generic objects, other than water-grid)
+        glBindFramebuffer(GL_FRAMEBUFFER, m_depthFBO);
+
+        // since the skybox is at infinity, its depth is handled by clearing the depth buffer
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        // enable shader program...
+        glUseProgram(depthProgram);
+
+        for (std::shared_ptr<MeshObject const> o : objects) {
+            // don't render invisible objects or non-generics...
+            if (!o->m_isVisible || Tag::GENERIC != o->getTag()) continue;
+
+            glm::mat4 const mvpMat{viewProjection * o->getModel()};
+
+            // bind geometry data...
+            glBindVertexArray(o->vao);
+
+            // set uniforms...
+            glUniformMatrix4fv(glGetUniformLocation(depthProgram, "mvpMat"), 1, GL_FALSE, glm::value_ptr(mvpMat));
+
+            // POINT, LINE or FILL...
+            glPolygonMode(GL_FRONT_AND_BACK, o->m_polygonMode);
+            glDrawElements(o->m_primitiveMode, o->drawFaces.size(), GL_UNSIGNED_INT, (void*)0);
+
+            // unbind
+            glBindVertexArray(0);
+        }
+
+        // disable
+        glUseProgram(0);
+        // reset
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         ///////////////////////////////////////////////////
 
@@ -631,7 +705,8 @@ namespace wave_tool {
 
             if (o->shaderProgramID == mainProgram) {
                 glm::mat4 const modelMat{o->getModel()};
-                glm::mat4 const modelView{view * modelMat};
+                glm::mat4 const modelViewMat{view * modelMat};
+                glm::mat4 const mvpMat{projection * modelViewMat};
 
                 // enable shader program...
                 glUseProgram(mainProgram);
@@ -645,13 +720,13 @@ namespace wave_tool {
                 glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusFar"), fogDepthRadiusFar);
                 glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusNear"), fogDepthRadiusNear);
                 glUniform1i(glGetUniformLocation(mainProgram, "hasNormals"), !o->normals.empty());
-                glUniform1i(glGetUniformLocation(mainProgram, "hasTexture"), o->hasTexture);
-                Texture::bind2DTexture(mainProgram, o->textureID, std::string("image"));
-                //TODO: make sure the shader works with a directional light
-                glUniform3fv(glGetUniformLocation(mainProgram, "lightPos"), 1, glm::value_ptr(sunPosition));
+                //TODO: handle this better
+                glUniform1i(glGetUniformLocation(mainProgram, "isTextured"), o->hasTexture);
+                glUniform3fv(glGetUniformLocation(mainProgram, "lightVec"), 1, glm::value_ptr(lightVec));
+                Texture::bind2DTexture(mainProgram, o->textureID, "textureData");
                 glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelMat"), 1, GL_FALSE, glm::value_ptr(modelMat));
-                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelView"), 1, GL_FALSE, glm::value_ptr(modelView));
-                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelViewMat"), 1, GL_FALSE, glm::value_ptr(modelViewMat));
+                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "mvpMat"), 1, GL_FALSE, glm::value_ptr(mvpMat));
                 glUniform1f(glGetUniformLocation(mainProgram, "zFar"), Z_FAR);
 
                 // POINT, LINE or FILL...
@@ -662,7 +737,7 @@ namespace wave_tool {
                 // unbind
                 glBindVertexArray(0);
             } else if (o->shaderProgramID == trivialProgram) {
-                glm::mat4 const mvp{projection * view * o->getModel()};
+                glm::mat4 const mvp{viewProjection * o->getModel()};
 
                 // enable shader program...
                 glUseProgram(trivialProgram);
@@ -946,6 +1021,7 @@ namespace wave_tool {
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "bottomLeftGridPointInWorld"), 1, glm::value_ptr(bottomLeftGridPointInWorld));
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "bottomRightGridPointInWorld"), 1, glm::value_ptr(bottomRightGridPointInWorld));
                 glUniform3fv(glGetUniformLocation(waterGridProgram, "cameraPosition"), 1, glm::value_ptr(m_camera->getPosition()));
+                Texture::bind2DTexture(waterGridProgram, m_depthTexture2D, "depthTexture2D");
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "fogColourFarAtCurrentTime"), 1, glm::value_ptr(fogColourFarAtCurrentTime));
                 glUniform1f(glGetUniformLocation(waterGridProgram, "fogDepthRadiusFar"), fogDepthRadiusFar);
                 glUniform1f(glGetUniformLocation(waterGridProgram, "fogDepthRadiusNear"), fogDepthRadiusNear);
@@ -991,8 +1067,8 @@ namespace wave_tool {
                 glUniform2fv(glGetUniformLocation(waterGridProgram, "viewportWidthHeight"), 1, glm::value_ptr(glm::vec2{(float)m_windowWidth, (float)m_windowHeight}));
                 glUniformMatrix4fv(glGetUniformLocation(waterGridProgram, "viewProjection"), 1, GL_FALSE, glm::value_ptr(viewProjection));
                 glUniform1f(glGetUniformLocation(waterGridProgram, "waveAnimationTimeInSeconds"), waveAnimationTimeInSeconds);
-                Texture::bind2DTexture(waterGridProgram, m_worldSpaceDepthTexture2D, "worldSpaceDepthTexture2D");
                 glUniform1f(glGetUniformLocation(waterGridProgram, "zFar"), Z_FAR);
+                glUniform1f(glGetUniformLocation(waterGridProgram, "zNear"), Z_NEAR);
 
                 // draw...
                 // POINT, LINE or FILL...
@@ -1239,6 +1315,10 @@ namespace wave_tool {
         glBindRenderbuffer(GL_RENDERBUFFER, m_depth24Stencil8RBO);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_windowWidth, m_windowHeight);
         glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+        glBindTexture(GL_TEXTURE_2D, m_depthTexture2D);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, m_windowWidth, m_windowHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+        glBindTexture(GL_TEXTURE_2D, 0);
 
         glBindTexture(GL_TEXTURE_2D, m_localReflectionsTexture2D);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_windowWidth, m_windowHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);

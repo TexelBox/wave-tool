@@ -31,13 +31,11 @@ uniform float verticalBounceWaveDisplacement;
 uniform mat4 viewMatOnlyYaw;
 uniform mat4 viewProjection;
 uniform float waveAnimationTimeInSeconds; // in range [0.0, inf)
-uniform float zFar;
 
 out vec4 heightmap_colour;
 out vec3 normal;
 out vec3 normalVecInViewSpaceOnlyYaw;
-out vec3 viewVec;
-out float viewVecDepth;
+out vec3 viewVecRaw;
 out vec2 xyPositionNDCSpaceHeight0;
 
 // reference: https://developer.nvidia.com/gpugems/gpugems/part-i-natural-effects/chapter-1-effective-water-simulation-physical-models
@@ -124,13 +122,9 @@ void main() {
     vec4 positionClipSpaceHeight0 = viewProjection * vec4(position.x, 0.0f, position.z, 1.0f);
     xyPositionNDCSpaceHeight0 = positionClipSpaceHeight0.xy / positionClipSpaceHeight0.w;
 
-    // output view depth and view vector (V)
-    //NOTE: this should always be defined as a unit vector pointing away from a surface point towards the camera eye
-    vec3 viewVecRaw = cameraPosition - position.xyz;
-    float viewVecLength = length(viewVecRaw);
-    viewVec = viewVecRaw / viewVecLength;
-    //TODO: clipping will probably interpolate wrong if I clamp the upper bound, so just remove this clamping when I implement the spherical clipping
-    viewVecDepth = clamp(viewVecLength / zFar, 0.0f, 1.0f);
+    // output world-space view vector (non-normalized)
+    //NOTE: defined as pointing away from a surface point towards the camera eye
+    viewVecRaw = cameraPosition - position.xyz;
 
     //TODO: refactor all these position calculations into 1 function
     //TODO: if possible, it would be nice to get all the vertex positions computed and then pass them off to another shader stage to compute all the normals without redundant calculation, but this works for now
@@ -162,7 +156,7 @@ void main() {
     normal = normalize(cross((pos_plus_du - pos_minus_du).xyz, (pos_plus_dv - pos_minus_dv).xyz));
     // flip the normal when the camera is underwater...
     //TODO: I think this is inaccurate when camera is close to water surface, so a fix would be to compute the "water position.y" where the camera is (from camera.xz) and then compare water position.y to cameraPosition.y to decide if flipping is needed
-    if (dot(normal, viewVec) < 0.0f) normal *= -1;
+    if (dot(normal, normalize(viewVecRaw)) < 0.0f) normal *= -1;
 
     // output normal vector in view space of the camera with only yaw (thus, camera y-axis == world-space y-axis)
     normalVecInViewSpaceOnlyYaw = normalize((viewMatOnlyYaw * vec4(normal, 0.0f)).xyz);
