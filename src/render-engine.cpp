@@ -462,6 +462,7 @@ namespace wave_tool {
                 glUniform4fv(glGetUniformLocation(mainProgram, "fogColourFarAtCurrentTime"), 1, glm::value_ptr(fogColourFarAtCurrentTime));
                 glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusFar"), fogDepthRadiusFar);
                 glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusNear"), fogDepthRadiusNear);
+                glUniform1i(glGetUniformLocation(mainProgram, "forceFlipNormals"), GL_TRUE);
                 glUniform1i(glGetUniformLocation(mainProgram, "hasNormals"), !o->normals.empty());
                 //TODO: handle this better
                 glUniform1i(glGetUniformLocation(mainProgram, "isTextured"), o->hasTexture);
@@ -546,6 +547,7 @@ namespace wave_tool {
                 glUniform4fv(glGetUniformLocation(mainProgram, "fogColourFarAtCurrentTime"), 1, glm::value_ptr(fogColourFarAtCurrentTime));
                 glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusFar"), fogDepthRadiusFar);
                 glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusNear"), fogDepthRadiusNear);
+                glUniform1i(glGetUniformLocation(mainProgram, "forceFlipNormals"), GL_FALSE);
                 glUniform1i(glGetUniformLocation(mainProgram, "hasNormals"), !o->normals.empty());
                 //TODO: handle this better
                 glUniform1i(glGetUniformLocation(mainProgram, "isTextured"), o->hasTexture);
@@ -719,6 +721,7 @@ namespace wave_tool {
                 glUniform4fv(glGetUniformLocation(mainProgram, "fogColourFarAtCurrentTime"), 1, glm::value_ptr(fogColourFarAtCurrentTime));
                 glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusFar"), fogDepthRadiusFar);
                 glUniform1f(glGetUniformLocation(mainProgram, "fogDepthRadiusNear"), fogDepthRadiusNear);
+                glUniform1i(glGetUniformLocation(mainProgram, "forceFlipNormals"), GL_FALSE);
                 glUniform1i(glGetUniformLocation(mainProgram, "hasNormals"), !o->normals.empty());
                 //TODO: handle this better
                 glUniform1i(glGetUniformLocation(mainProgram, "isTextured"), o->hasTexture);

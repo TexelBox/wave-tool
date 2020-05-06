@@ -6,6 +6,7 @@
 // reference: https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/gl_ClipDistance.xhtml
 // reference: https://prideout.net/clip-planes
 uniform vec4 clipPlane0 = vec4(0.0f, 0.0f, 0.0f, 1.0f); // <A, B, C, D> where Ax + By + Cz = D
+uniform bool forceFlipNormals;
 uniform mat4 modelMat;
 uniform mat4 modelViewMat;
 uniform mat4 mvpMat;
@@ -25,7 +26,7 @@ out float gl_ClipDistance[1];
 
 void main() {
     vec4 positionHomogenous = vec4(position, 1.0f);
-    vec4 normalHomogenous = vec4(normal, 0.0f);
+    vec4 normalHomogenous = forceFlipNormals ? vec4(-normal, 0.0f) : vec4(normal, 0.0f);
 
     // output (pass-throughs)...
     COLOUR = colour;
