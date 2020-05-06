@@ -291,6 +291,21 @@ namespace wave_tool {
             ImGui::Separator();
         }
 
+        if (ImGui::SliderFloat("WATER BUMP ROUGHNESS", &m_renderEngine->heightmapSampleScale, 0.0f, 1.0f)) {
+            // force-clamp (handle CTRL + LEFT_CLICK)
+            if (m_renderEngine->heightmapSampleScale < 0.0f) m_renderEngine->heightmapSampleScale = 0.0f;
+        }
+
+        if (ImGui::SliderFloat("WATER BUMP STEEPNESS", &m_renderEngine->heightmapDisplacementScale, 0.0f, 1.0f)) {
+            // force-clamp (handle CTRL + LEFT_CLICK)
+            if (m_renderEngine->heightmapDisplacementScale < 0.0f) m_renderEngine->heightmapDisplacementScale = 0.0f;
+        }
+
+        if (ImGui::SliderFloat("VERTICAL-BOUNCE-WAVE AMPLITUDE", &m_renderEngine->verticalBounceWaveAmplitude, 0.0f, 1.0f)) {
+            // force-clamp (handle CTRL + LEFT_CLICK)
+            if (m_renderEngine->verticalBounceWaveAmplitude < 0.0f) m_renderEngine->verticalBounceWaveAmplitude = 0.0f;
+        }
+
         if (ImGui::SliderFloat("VERTICAL-BOUNCE-WAVE PHASE", &m_renderEngine->verticalBounceWavePhase, 0.0f, 1.0f)) {
             // force-clamp (handle CTRL + LEFT_CLICK)
             m_renderEngine->verticalBounceWavePhase = glm::clamp(m_renderEngine->verticalBounceWavePhase, 0.0f, 1.0f);

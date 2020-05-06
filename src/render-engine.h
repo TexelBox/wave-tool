@@ -184,8 +184,8 @@ namespace wave_tool {
             glm::vec4 fogColourFarAtNoon{1.0f, 1.0f, 1.0f, 0.8f}; // RGB is the uniform tint (will darken when sun is lower in sky), A is the density (alpha at >= fogDepthRadiusFar)
             float fogDepthRadiusFar{1.0f}; // in range [fogDepthRadiusNear, 1.0]
             float fogDepthRadiusNear{0.0f}; // in range [0.0, fogDepthRadiusFar]
-            float heightmapDisplacementScale{0.1f}; // in range [0.0, inf)
-            float heightmapSampleScale{0.1f}; // in range [0.0, inf)
+            float heightmapDisplacementScale{1.0f}; // in range [0.0, inf)
+            float heightmapSampleScale{0.02f}; // in range [0.0, inf)
             bool isAnimatingTimeOfDay = false;
             bool isAnimatingWaves = true;
             float overcastStrength = 0.0f; // in range [0.0, 1.0]
