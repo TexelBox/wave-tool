@@ -14,6 +14,8 @@ namespace wave_tool {
         // hard-coded defaults
         gerstnerWaves.at(0) = std::make_shared<geometry::GerstnerWave>(0.06f, 1.0f, 2.0f, 1.0f, glm::vec2{1.0f, 0.0f});
         gerstnerWaves.at(1) = std::make_shared<geometry::GerstnerWave>(0.1f, 1.0f, 0.2f, 0.0f, glm::normalize(glm::vec2{1.0f, 1.0f}));
+        gerstnerWaves.at(2) = std::make_shared<geometry::GerstnerWave>(0.0f, 0.0f, 0.0f, 0.0f, glm::vec2{0.0f, 1.0f});
+        gerstnerWaves.at(3) = std::make_shared<geometry::GerstnerWave>(0.0f, 0.0f, 0.0f, 0.0f, glm::vec2{0.0f, 1.0f});
 
         //NOTE: near distance must be small enough to not conflict with skybox size
         m_camera = std::make_shared<Camera>(72.0f, (float)m_windowWidth / m_windowHeight, Z_NEAR, Z_FAR, glm::vec3(0.0f, 4.0f, 70.0f));
@@ -1036,8 +1038,8 @@ namespace wave_tool {
                     std::shared_ptr<geometry::GerstnerWave const> gerstnerWave{gerstnerWaves.at(i)};
                     if (nullptr == gerstnerWave) continue;
 
-                    //TODO: handle div by zero
-                    float const steepness_Q_i{gerstnerWave->steepness_Q / (gerstnerWave->frequency_w * gerstnerWave->amplitude_A * geometry::GerstnerWave::Count())};
+                    //NOTE: div by zero is just handled by setting to a symbolic 0.0
+                    float const steepness_Q_i{(gerstnerWave->frequency_w * gerstnerWave->amplitude_A) != 0.0f ? gerstnerWave->steepness_Q / (gerstnerWave->frequency_w * gerstnerWave->amplitude_A * geometry::GerstnerWave::Count()) : 0.0f};
                     std::string const prefixStr{"gerstnerWaves[" + std::to_string(i) + "]."};
 
                     glUniform1f(glGetUniformLocation(waterGridProgram, std::string{prefixStr + "amplitude_A"}.c_str()), gerstnerWave->amplitude_A);

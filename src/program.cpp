@@ -301,6 +301,48 @@ namespace wave_tool {
             ImGui::Separator();
         }
 
+        if (!m_renderEngine->gerstnerWaves.empty()) {
+            if (ImGui::TreeNode("GERSTNER WAVES")) {
+                ImGui::Separator();
+                for (unsigned int i = 0; i < m_renderEngine->gerstnerWaves.size(); ++i) {
+                    if (nullptr == m_renderEngine->gerstnerWaves.at(i)) continue;
+
+                    if (ImGui::TreeNode(std::string{"wave" + std::to_string(i)}.c_str())) {
+                        ImGui::Separator();
+                        if (ImGui::SliderFloat(std::string{"Amplitude##" + std::to_string(i)}.c_str(), &m_renderEngine->gerstnerWaves.at(i)->amplitude_A, 0.0f, 1.0f)) {
+                            // force-clamp (handle CTRL + LEFT_CLICK)
+                            if (m_renderEngine->gerstnerWaves.at(i)->amplitude_A < 0.0f) m_renderEngine->gerstnerWaves.at(i)->amplitude_A = 0.0f;
+                        }
+                        if (ImGui::SliderFloat(std::string{"Frequency##" + std::to_string(i)}.c_str(), &m_renderEngine->gerstnerWaves.at(i)->frequency_w, 0.0f, 1.0f)) {
+                            // force-clamp (handle CTRL + LEFT_CLICK)
+                            if (m_renderEngine->gerstnerWaves.at(i)->frequency_w < 0.0f) m_renderEngine->gerstnerWaves.at(i)->frequency_w = 0.0f;
+                        }
+                        if (ImGui::SliderFloat(std::string{"Phase Constant (~Speed)##" + std::to_string(i)}.c_str(), &m_renderEngine->gerstnerWaves.at(i)->phaseConstant_phi, 0.0f, 10.0f)) {
+                            // force-clamp (handle CTRL + LEFT_CLICK)
+                            if (m_renderEngine->gerstnerWaves.at(i)->phaseConstant_phi < 0.0f) m_renderEngine->gerstnerWaves.at(i)->phaseConstant_phi = 0.0f;
+                        }
+                        if (ImGui::SliderFloat(std::string{"Steepness##" + std::to_string(i)}.c_str(), &m_renderEngine->gerstnerWaves.at(i)->steepness_Q, 0.0f, 1.0f)) {
+                            // force-clamp (handle CTRL + LEFT_CLICK)
+                            m_renderEngine->gerstnerWaves.at(i)->steepness_Q = glm::clamp(m_renderEngine->gerstnerWaves.at(i)->steepness_Q, 0.0f, 1.0f);
+                        }
+                        if (ImGui::SliderFloat2(std::string{"XZ-Direction##" + std::to_string(i)}.c_str(), (float*)&m_renderEngine->gerstnerWaves.at(i)->xzDirection_D, 0.0f, 1.0f)) {
+                            // force-clamp (handle CTRL + LEFT_CLICK)
+                            m_renderEngine->gerstnerWaves.at(i)->xzDirection_D = glm::clamp(m_renderEngine->gerstnerWaves.at(i)->xzDirection_D, glm::vec2{0.0f, 0.0f}, glm::vec2{1.0f, 1.0f});
+                            //TODO: use an epsilon???
+                            // we can't normalize the 0 vector, so reset to a dummy
+                            if (0.0f == glm::length(m_renderEngine->gerstnerWaves.at(i)->xzDirection_D)) m_renderEngine->gerstnerWaves.at(i)->xzDirection_D = glm::vec2{0.0f, 1.0f};
+                            else m_renderEngine->gerstnerWaves.at(i)->xzDirection_D = glm::normalize(m_renderEngine->gerstnerWaves.at(i)->xzDirection_D);
+                        }
+                        ImGui::Separator();
+                        ImGui::TreePop();
+                    }
+                }
+                ImGui::Separator();
+                ImGui::TreePop();
+            }
+            ImGui::Separator();
+        }
+
         if (ImGui::SliderFloat("WATER BUMP ROUGHNESS", &m_renderEngine->heightmapSampleScale, 0.0f, 1.0f)) {
             // force-clamp (handle CTRL + LEFT_CLICK)
             if (m_renderEngine->heightmapSampleScale < 0.0f) m_renderEngine->heightmapSampleScale = 0.0f;
