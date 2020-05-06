@@ -136,6 +136,12 @@ namespace wave_tool {
         };
     }
 
+    enum RenderMode {
+        DEFAULT = 0,
+        LOCAL_REFLECTIONS = 1,
+        LOCAL_REFRACTIONS = 2
+    };
+
     class RenderEngine {
         public:
             // setup the camera data needed for each cubemap side with the same indexing as the internal OpenGL enums
@@ -201,6 +207,8 @@ namespace wave_tool {
             float verticalBounceWavePhase = 0.0f; // in range [0.0, 1.0]
 
             std::array<std::shared_ptr<geometry::GerstnerWave>, geometry::GerstnerWave::MAX_COUNT> gerstnerWaves;
+
+            RenderMode renderMode{RenderMode::DEFAULT};
 
             RenderEngine(GLFWwindow *window);
             ~RenderEngine();

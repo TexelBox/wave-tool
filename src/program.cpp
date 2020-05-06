@@ -124,6 +124,16 @@ namespace wave_tool {
 
         ImGui::Separator();
 
+        ImGui::Text("RENDER MODE:");
+        ImGui::SameLine();
+        if (ImGui::Button("DEFAULT##0")) m_renderEngine->renderMode = RenderMode::DEFAULT;
+        ImGui::SameLine();
+        if (ImGui::Button("LOCAL REFLECTIONS##0")) m_renderEngine->renderMode = RenderMode::LOCAL_REFLECTIONS;
+        ImGui::SameLine();
+        if (ImGui::Button("LOCAL REFRACTIONS##0")) m_renderEngine->renderMode = RenderMode::LOCAL_REFRACTIONS;
+
+        ImGui::Separator();
+
         if (ImGui::SliderFloat("TIME OF DAY (HOURS)", &m_renderEngine->timeOfDayInHours, 0.0f, 24.0f)) {
             // force-clamp (handle CTRL + LEFT_CLICK)
             m_renderEngine->timeOfDayInHours = glm::clamp(m_renderEngine->timeOfDayInHours, 0.0f, 24.0f);

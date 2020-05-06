@@ -1087,6 +1087,40 @@ namespace wave_tool {
             }
         }
         ///////////////////////////////////////////////////
+
+        ///////////////////////////////////////////////////
+        // SPECIAL DEBUG RENDER MODES
+        //TODO: optimize the layout so that we don't render most of the stuff above if want to render one of these debug modes...
+
+        if (0 != m_emptyVAO && RenderMode::DEFAULT != renderMode) {
+            glDisable(GL_BLEND);
+            glDepthMask(GL_FALSE);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            // enable screen-space-quad shader program
+            glUseProgram(screenSpaceQuadProgram);
+            // bind geometry data...
+            glBindVertexArray(m_emptyVAO);
+
+            // set uniforms...
+            glUniform1i(glGetUniformLocation(screenSpaceQuadProgram, "isTextured"), GL_TRUE);
+            glUniform4fv(glGetUniformLocation(screenSpaceQuadProgram, "solidColour"), 1, glm::value_ptr(glm::vec4{1.0f, 1.0f, 1.0f, 1.0f})); // unused colour
+            if (RenderMode::LOCAL_REFLECTIONS == renderMode) Texture::bind2DTexture(screenSpaceQuadProgram, m_localReflectionsTexture2D, "textureData");
+            else if (RenderMode::LOCAL_REFRACTIONS == renderMode) Texture::bind2DTexture(screenSpaceQuadProgram, m_localRefractionsTexture2D, "textureData");
+
+            // POINT, LINE or FILL...
+            glPolygonMode(GL_FRONT_AND_BACK, PolygonMode::FILL);
+            glDrawArrays(PrimitiveMode::TRIANGLE_STRIP, 0, 4);
+
+            Texture::unbind2DTexture();
+            // unbind
+            glBindVertexArray(0);
+
+            // reset
+            glDepthMask(GL_TRUE);
+            glEnable(GL_BLEND);
+        }
+        ///////////////////////////////////////////////////
     }
 
     void RenderEngine::assignBuffers(MeshObject &object)
