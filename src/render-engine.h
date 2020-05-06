@@ -189,10 +189,13 @@ namespace wave_tool {
             bool isAnimatingTimeOfDay = false;
             bool isAnimatingWaves = true;
             float overcastStrength = 0.0f; // in range [0.0, 1.0]
+            float softEdgesDeltaDepthThreshold{0.05f}; // in range [0.0, 1.0]
             float sunHorizonDarkness = 0.25f; // in range [0.0, 1.0]
             float sunShininess = 50.0f; // in range [0.0, inf)
             float sunStrength = 1.0f; // in range [0.0, 1.0]
             float timeOfDayInHours = 9.0f; // in range [0.0, 24.0]
+            float tintDeltaDepthThreshold{0.1f}; // in range [0.0, 1.0]
+            float waterClarity{0.3f}; // in range [0.0, 1.0]
             float waveAnimationTimeInSeconds = 0.0f; // in range [0.0, inf)
             float verticalBounceWaveAmplitude{0.1f}; // in range [0.0, inf)
             float verticalBounceWavePhase = 0.0f; // in range [0.0, 1.0]

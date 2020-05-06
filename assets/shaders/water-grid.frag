@@ -7,13 +7,19 @@ uniform float fogDepthRadiusNear;
 uniform sampler2D localReflectionsTexture2D;
 uniform sampler2D localRefractionsTexture2D;
 uniform samplerCube skybox;
+// in range [0.0, 1.0]
+uniform float softEdgesDeltaDepthThreshold;
 // the inverse light direction
 uniform vec3 sunPosition;
 // higher shininess means smaller specular highlight (sun)
 uniform float sunShininess;
 // this scalar affects how much of the sun light is added on top of the diffuse sky colour
 uniform float sunStrength;
+// in range [0.0, 1.0]
+uniform float tintDeltaDepthThreshold;
 uniform vec2 viewportWidthHeight;
+// in range [0.0, 1.0]
+uniform float waterClarity;
 uniform float zFar;
 uniform float zNear;
 
@@ -98,18 +104,12 @@ void main() {
     //TODO: figure out a more realistic way in determining the tint colour (e.g. factor in the sky colour?), or have them in UI?
     const vec3 DEEP_TINT_COLOUR_AT_NOON = vec3(0.0f, 0.341f, 0.482f);
     const vec3 SHALLOW_TINT_COLOUR_AT_NOON = vec3(0.3f, 0.941f, 0.903f);
-    //TODO: pass this as a uniform (from UI)
-    // in range (0.0, 1.0]
-    const float TINT_DELTA_DEPTH_THRESHOLD = 0.1f;
-    float tintInterpolationFactor = hack_skybox_in_back * (1.0f - clamp(deltaDepthClamped / TINT_DELTA_DEPTH_THRESHOLD, 0.0f, 1.0f));
+    float tintInterpolationFactor = 0.0f == tintDeltaDepthThreshold ? 0.0f : hack_skybox_in_back * (1.0f - clamp(deltaDepthClamped / tintDeltaDepthThreshold, 0.0f, 1.0f));
     vec3 tintColourAtNoon = mix(DEEP_TINT_COLOUR_AT_NOON, SHALLOW_TINT_COLOUR_AT_NOON, tintInterpolationFactor);
     // fade the tint to black when sun is lower in sky
     vec3 tintColourAtCurrentTime = clamp(sunPosition.y, 0.0f, 1.0f) * tintColourAtNoon;
 
-    //TODO: pass this as a uniform (from UI)
-    // in range [0.0, 1.0]
-    const float WATER_CLARITY = 0.3f;
-    vec3 waterFresnelTransmissionColour = mix(tintColourAtCurrentTime, localRefractionColour.rgb, WATER_CLARITY * localRefractionColour.a * (1.0f - deltaDepthClamped));
+    vec3 waterFresnelTransmissionColour = mix(tintColourAtCurrentTime, localRefractionColour.rgb, waterClarity * localRefractionColour.a * (1.0f - deltaDepthClamped));
     //TODO: fix the sun reflection highlight colour to use the global reflection colour with a similar power scalar (in order to better handle atmosphere conditions like fog/overcast/clouds)
     vec3 waterFresnelReflectionColour = mix(skybox_reflection_colour.rgb + sun_reflection_colour.rgb, localReflectionColour.rgb, localReflectionColour.a);
 
@@ -120,11 +120,7 @@ void main() {
     colour = vec4(mix(waterFresnelTransmissionColour, waterFresnelReflectionColour, fresnel_f_theta), 1.0f);
 
     // SOFTEN THE EDGES...
-    //TODO: pass this as a uniform (from UI)
-    //NOTE: the lower this value, the more float imprecision is an issue and thus more artifacts
-    // in range (0.0, 1.0]
-    const float SOFT_EDGES_DELTA_DEPTH_THRESHOLD = 0.05f;
-    float edgeHardness = 1.0f - (hack_skybox_in_back * (1.0f - clamp(deltaDepthClamped / SOFT_EDGES_DELTA_DEPTH_THRESHOLD, 0.0f, 1.0f)));
+    float edgeHardness = 0.0f == softEdgesDeltaDepthThreshold ? 1.0f : 1.0f - (hack_skybox_in_back * (1.0f - clamp(deltaDepthClamped / softEdgesDeltaDepthThreshold, 0.0f, 1.0f)));
     //NOTE: any water covering skybox area will have hard edges (otherwise, the grid would start to fade into a circle)
     colour.a = edgeHardness;
 

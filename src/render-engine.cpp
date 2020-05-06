@@ -1057,15 +1057,18 @@ namespace wave_tool {
                 glBindTexture(GL_TEXTURE_CUBE_MAP, m_skyboxCubemap);
                 glUniform1i(glGetUniformLocation(waterGridProgram, "skybox"), m_skyboxCubemap);
 
+                glUniform1f(glGetUniformLocation(waterGridProgram, "softEdgesDeltaDepthThreshold"), softEdgesDeltaDepthThreshold);
                 glUniform3fv(glGetUniformLocation(waterGridProgram, "sunPosition"), 1, glm::value_ptr(sunPosition));
                 glUniform1f(glGetUniformLocation(waterGridProgram, "sunShininess"), sunShininess);
                 glUniform1f(glGetUniformLocation(waterGridProgram, "sunStrength"), sunStrength);
+                glUniform1f(glGetUniformLocation(waterGridProgram, "tintDeltaDepthThreshold"), tintDeltaDepthThreshold);
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "topLeftGridPointInWorld"), 1, glm::value_ptr(topLeftGridPointInWorld));
                 glUniform4fv(glGetUniformLocation(waterGridProgram, "topRightGridPointInWorld"), 1, glm::value_ptr(topRightGridPointInWorld));
                 glUniform1f(glGetUniformLocation(waterGridProgram, "verticalBounceWaveDisplacement"), verticalBounceWaveDisplacement);
                 glUniformMatrix4fv(glGetUniformLocation(waterGridProgram, "viewMatOnlyYaw"), 1, GL_FALSE, glm::value_ptr(viewMatOnlyYaw));
                 glUniform2fv(glGetUniformLocation(waterGridProgram, "viewportWidthHeight"), 1, glm::value_ptr(glm::vec2{(float)m_windowWidth, (float)m_windowHeight}));
                 glUniformMatrix4fv(glGetUniformLocation(waterGridProgram, "viewProjection"), 1, GL_FALSE, glm::value_ptr(viewProjection));
+                glUniform1f(glGetUniformLocation(waterGridProgram, "waterClarity"), waterClarity);
                 glUniform1f(glGetUniformLocation(waterGridProgram, "waveAnimationTimeInSeconds"), waveAnimationTimeInSeconds);
                 glUniform1f(glGetUniformLocation(waterGridProgram, "zFar"), Z_FAR);
                 glUniform1f(glGetUniformLocation(waterGridProgram, "zNear"), Z_NEAR);

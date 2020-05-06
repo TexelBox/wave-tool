@@ -332,6 +332,21 @@ namespace wave_tool {
             }
         }
 
+        if (ImGui::SliderFloat("TINT DEPTH THRESHOLD", &m_renderEngine->tintDeltaDepthThreshold, 0.0f, 1.0f)) {
+            // force-clamp (handle CTRL + LEFT_CLICK)
+            m_renderEngine->tintDeltaDepthThreshold = glm::clamp(m_renderEngine->tintDeltaDepthThreshold, 0.0f, 1.0f);
+        }
+
+        if (ImGui::SliderFloat("WATER CLARITY", &m_renderEngine->waterClarity, 0.0f, 1.0f)) {
+            // force-clamp (handle CTRL + LEFT_CLICK)
+            m_renderEngine->waterClarity = glm::clamp(m_renderEngine->waterClarity, 0.0f, 1.0f);
+        }
+
+        if (ImGui::SliderFloat("SOFT-EDGES DEPTH THRESHOLD", &m_renderEngine->softEdgesDeltaDepthThreshold, 0.0f, 1.0f)) {
+            // force-clamp (handle CTRL + LEFT_CLICK)
+            m_renderEngine->softEdgesDeltaDepthThreshold = glm::clamp(m_renderEngine->softEdgesDeltaDepthThreshold, 0.0f, 1.0f);
+        }
+
         ImGui::Separator();
 
         ImGui::End();
