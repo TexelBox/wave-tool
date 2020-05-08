@@ -11,15 +11,15 @@
 //      the Z coord doesn't matter if you have depth testing disabled (or just writing disabled), but I set it to 0.0 ("middle plane" of frustum) so that it's obvious when you forget to disable depth testing/writing
 //      the W coord must be 1.0 in order for the true ndc-space position after perspective divide stage (gl_Position.xyz / gl_Position.w) to match the clip-space position (gl_Position.xyz)
 
-const vec2 CORNER_UVS[4] = {vec2(0.0f, 0.0f),  // bottom-left corner
-                            vec2(1.0f, 0.0f),  // bottom-right corner
-                            vec2(0.0f, 1.0f),  // top-left corner
-                            vec2(1.0f, 1.0f)}; // top-right corner
+const vec2 CORNER_UVS[4] = vec2[4](vec2(0.0f, 0.0f),  // bottom-left corner
+                                   vec2(1.0f, 0.0f),  // bottom-right corner
+                                   vec2(0.0f, 1.0f),  // top-left corner
+                                   vec2(1.0f, 1.0f)); // top-right corner
 
-const vec4 NDC_SPACE_CORNER_POSITIONS[4] = {vec4(-1.0f, -1.0f, 0.0f, 1.0f), // bottom-left corner
-                                            vec4(1.0f, -1.0f, 0.0f, 1.0f),  // bottom-right corner
-                                            vec4(-1.0f, 1.0f, 0.0f, 1.0f),  // top-left corner
-                                            vec4(1.0f, 1.0f, 0.0f, 1.0f)};  // top-right corner
+const vec4 NDC_SPACE_CORNER_POSITIONS[4] = vec4[4](vec4(-1.0f, -1.0f, 0.0f, 1.0f), // bottom-left corner
+                                                   vec4(1.0f, -1.0f, 0.0f, 1.0f),  // bottom-right corner
+                                                   vec4(-1.0f, 1.0f, 0.0f, 1.0f),  // top-left corner
+                                                   vec4(1.0f, 1.0f, 0.0f, 1.0f));  // top-right corner
 
 out vec2 uv;
 
