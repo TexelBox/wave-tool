@@ -136,6 +136,39 @@ namespace wave_tool {
 
         ImGui::Separator();
 
+        // reference: https://www.glfw.org/docs/latest/group__keys.html
+        // reference: https://github.com/ocornut/imgui/blob/7b3d379819c487f0d5323ed7bd7c9109a2bc1d76/imgui_demo.cpp#L154-L167
+        if (ImGui::TreeNode("CONTROLS")) {
+            ImGui::Separator();
+            if (ImGui::TreeNode("INTERNAL")) {
+                ImGui::Separator();
+                ImGui::BulletText("A - move left");
+                ImGui::BulletText("D - move right");
+                ImGui::BulletText("E - move up");
+                ImGui::BulletText("Q - move down");
+                ImGui::BulletText("S - move back");
+                ImGui::BulletText("W - move forward");
+                ImGui::BulletText("ESCAPE - exit app");
+                ImGui::BulletText("LEFT_CLICK + DRAG - rotate camera");
+                ImGui::BulletText("SCROLL - zoom");
+                ImGui::Separator();
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("UI")) {
+                ImGui::Separator();
+                ImGui::BulletText("CTRL + LEFT_CLICK - convert widget into an input box");
+                ImGui::SameLine();
+                ImGui::TextDisabled("(?)");
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("note: this feature is only available on some widgets, and may be overridden if nonsensical inputs are entered.");
+                ImGui::Separator();
+                ImGui::TreePop();
+            }
+            ImGui::Separator();
+            ImGui::TreePop();
+        }
+
+        ImGui::Separator();
+
         if (nullptr != m_yzPlane) {
             if (ImGui::Button("TOGGLE YZ-PLANE / +X-AXIS (RED)")) m_yzPlane->m_isVisible = !m_yzPlane->m_isVisible;
             ImGui::SameLine();
