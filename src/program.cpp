@@ -325,9 +325,9 @@ namespace wave_tool {
                             // force-clamp (handle CTRL + LEFT_CLICK)
                             m_renderEngine->gerstnerWaves.at(i)->steepness_Q = glm::clamp(m_renderEngine->gerstnerWaves.at(i)->steepness_Q, 0.0f, 1.0f);
                         }
-                        if (ImGui::SliderFloat2(std::string{"XZ-Direction##" + std::to_string(i)}.c_str(), (float*)&m_renderEngine->gerstnerWaves.at(i)->xzDirection_D, 0.0f, 1.0f)) {
+                        if (ImGui::SliderFloat2(std::string{"XZ-Direction##" + std::to_string(i)}.c_str(), (float*)&m_renderEngine->gerstnerWaves.at(i)->xzDirection_D, -1.0f, 1.0f)) {
                             // force-clamp (handle CTRL + LEFT_CLICK)
-                            m_renderEngine->gerstnerWaves.at(i)->xzDirection_D = glm::clamp(m_renderEngine->gerstnerWaves.at(i)->xzDirection_D, glm::vec2{0.0f, 0.0f}, glm::vec2{1.0f, 1.0f});
+                            m_renderEngine->gerstnerWaves.at(i)->xzDirection_D = glm::clamp(m_renderEngine->gerstnerWaves.at(i)->xzDirection_D, glm::vec2{-1.0f, -1.0f}, glm::vec2{1.0f, 1.0f});
                             //TODO: use an epsilon???
                             // we can't normalize the 0 vector, so reset to a dummy
                             if (0.0f == glm::length(m_renderEngine->gerstnerWaves.at(i)->xzDirection_D)) m_renderEngine->gerstnerWaves.at(i)->xzDirection_D = glm::vec2{0.0f, 1.0f};
