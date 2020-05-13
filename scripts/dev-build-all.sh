@@ -2,6 +2,11 @@
 # using the above shebang to be most-portable
 # https://stackoverflow.com/questions/10376206/what-is-the-preferred-bash-shebang
 
+# Get the directory this script is in.
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+# The remainder of this script assumes we're in the project root directory.
+cd "$DIR/../"
+
 no_pause="false"
 
 # reference: https://stackoverflow.com/questions/9994295/what-does-mean-in-a-shell-script
@@ -26,9 +31,6 @@ done
 # cmake -D sets a variable in the cmake cache (here I set the build config for the specific makefile that gets created)
 # I also set the PREFIX_BUILD_EXTERNAL_TESTS=ON so that all targets in tests/ are built
 # https://cmake.org/cmake/help/v3.2/manual/cmake.1.html
-
-# execute rest of script from project root directory like it use to
-cd ..
 
 echo "BUILDING DEBUG CONFIG..."
 mkdir -p build/Debug && cd build/Debug && cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug ../.. && make && cd ../..
