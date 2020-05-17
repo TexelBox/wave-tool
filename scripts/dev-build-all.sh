@@ -2,6 +2,7 @@
 # using the above shebang to be most-portable
 # https://stackoverflow.com/questions/10376206/what-is-the-preferred-bash-shebang
 
+# reference: https://stackoverflow.com/questions/59895/how-to-get-the-source-directory-of-a-bash-script-from-within-the-script-itself
 # Get the directory this script is in.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 # The remainder of this script assumes we're in the project root directory.
