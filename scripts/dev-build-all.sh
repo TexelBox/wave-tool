@@ -2,6 +2,18 @@
 # using the above shebang to be most-portable
 # https://stackoverflow.com/questions/10376206/what-is-the-preferred-bash-shebang
 
+# reference: https://stackoverflow.com/questions/59895/how-to-get-the-source-directory-of-a-bash-script-from-within-the-script-itself
+# handle users running this script from any directory
+# get the path to the directory containing this script
+# note: this solution is good enough (POSIX + works on multiple interpreters like sh/bash/dash)
+# note: there are flaws such as not handling symlinks or newline characters at end of directory names (very rare)
+path_to_script_dir="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
+echo "PATH TO SCRIPT DIRECTORY = $path_to_script_dir"
+path_to_project_root_dir="$path_to_script_dir/.."
+echo "PATH TO PROJECT ROOT DIRECTORY = $path_to_project_root_dir"
+# execute rest of script from project root directory...
+cd "$path_to_project_root_dir"
+
 no_pause="false"
 
 # reference: https://stackoverflow.com/questions/9994295/what-does-mean-in-a-shell-script
@@ -27,9 +39,6 @@ done
 # I also set the PREFIX_BUILD_EXTERNAL_TESTS=ON so that all targets in tests/ are built
 # https://cmake.org/cmake/help/v3.2/manual/cmake.1.html
 
-# execute rest of script from project root directory like it use to
-cd ..
-
 echo "BUILDING DEBUG CONFIG..."
 mkdir -p build/Debug && cd build/Debug && cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug ../.. && make && cd ../..
 
@@ -42,8 +51,15 @@ mkdir -p build/Release && cd build/Release && cmake -G "Unix Makefiles" -DCMAKE_
 echo "BUILDING RELWITHDEBINFO CONFIG..."
 mkdir -p build/RelWithDebInfo && cd build/RelWithDebInfo && cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=RelWithDebInfo ../.. && make && cd ../..
 
+# reference: https://stackoverflow.com/questions/92802/what-is-the-linux-equivalent-to-dos-pause
+# reference: https://unix.stackexchange.com/questions/53036/read-a-single-key-gives-an-error
+# reference: https://stackoverflow.com/questions/15744421/read-command-doesnt-wait-for-input
 # pause the script at the end (unless --no-pause option is set), until user wants to close it (analog to DOS-pause)
-# https://stackoverflow.com/questions/92802/what-is-the-linux-equivalent-to-dos-pause
+# note: -r is the only POSIX option for read utility, whereas most solutions are bash-only
+# reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/read.html
 if [ $no_pause = "false" ] ; then
-    read -n1 -r -p "Press any key to continue . . . " key
+    # prompt user
+    printf "Press [ENTER] to continue . . . "
+    # read raw (-r) input into a dummy variable (_)
+    read -r _
 fi
