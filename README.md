@@ -1,6 +1,27 @@
 # wave-tool
 C++/OpenGL tool for realistic ocean wave rendering. Originally developed as a winter 2020 term project for CPSC591 @ University of Calgary.
 
+---
+
+### Screenshots
+![screenshot-1](docs/assets/images/screenshots/screenshot-1.png)
+
+![screenshot-2](docs/assets/images/screenshots/screenshot-2.png)
+
+![screenshot-3](docs/assets/images/screenshots/screenshot-3.png)
+
+![screenshot-4](docs/assets/images/screenshots/screenshot-4.png)
+
+![screenshot-5](docs/assets/images/screenshots/screenshot-5.png)
+
+![screenshot-6](docs/assets/images/screenshots/screenshot-6.png)
+
+![screenshot-7](docs/assets/images/screenshots/screenshot-7.png)
+
+![screenshot-8](docs/assets/images/screenshots/screenshot-8.png)
+
+---
+
 ## [WIP]
 
 ---
